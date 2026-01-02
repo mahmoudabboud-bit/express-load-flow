@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
+import { sendNotification } from "@/lib/notifications";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +29,7 @@ interface Load {
   pickup_date: string;
   driver_name: string | null;
   truck_number: string | null;
+  client_id: string;
 }
 
 export default function DriverLoadsPage() {
@@ -73,13 +75,13 @@ export default function DriverLoadsPage() {
     setLoading(false);
   };
 
-  const handleStatusUpdate = async (loadId: string, newStatus: "In-Transit" | "Delivered") => {
-    setUpdating(loadId);
+  const handleStatusUpdate = async (load: Load, newStatus: "In-Transit" | "Delivered") => {
+    setUpdating(load.id);
     
     const { error } = await supabase
       .from("loads")
       .update({ status: newStatus })
-      .eq("id", loadId);
+      .eq("id", load.id);
 
     if (error) {
       toast({
@@ -88,6 +90,28 @@ export default function DriverLoadsPage() {
         description: "Could not update load status. Please try again.",
       });
     } else {
+      // Get client email for notification
+      const { data: clientProfile } = await supabase
+        .from("profiles")
+        .select("email")
+        .eq("id", load.client_id)
+        .single();
+
+      if (clientProfile?.email) {
+        const notificationType = newStatus === "In-Transit" ? "status_in_transit" : "status_delivered";
+        await sendNotification(
+          notificationType,
+          clientProfile.email,
+          {
+            id: load.id,
+            origin_address: load.origin_address,
+            destination_address: load.destination_address,
+            pickup_date: load.pickup_date,
+            driver_name: load.driver_name || undefined,
+          }
+        );
+      }
+
       toast({
         title: "Status Updated!",
         description: `Load marked as ${newStatus}.`,
@@ -229,7 +253,7 @@ export default function DriverLoadsPage() {
                             variant="accent"
                             size="lg"
                             className="w-full"
-                            onClick={() => handleStatusUpdate(load.id, "In-Transit")}
+                            onClick={() => handleStatusUpdate(load, "In-Transit")}
                             disabled={updating === load.id}
                           >
                             {updating === load.id ? (
@@ -248,7 +272,7 @@ export default function DriverLoadsPage() {
                             variant="accent"
                             size="lg"
                             className="w-full bg-status-delivered hover:bg-status-delivered/90"
-                            onClick={() => handleStatusUpdate(load.id, "Delivered")}
+                            onClick={() => handleStatusUpdate(load, "Delivered")}
                             disabled={updating === load.id}
                           >
                             {updating === load.id ? (

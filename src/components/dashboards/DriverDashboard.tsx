@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
+import { sendNotification } from "@/lib/notifications";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -9,7 +10,6 @@ import {
   MapPin, 
   Navigation, 
   Package,
-  Camera,
   CheckCircle,
   Clock
 } from "lucide-react";
@@ -25,6 +25,7 @@ interface Load {
   pickup_date: string;
   driver_name: string | null;
   truck_number: string | null;
+  client_id: string;
 }
 
 export function DriverDashboard() {
@@ -90,6 +91,28 @@ export function DriverDashboard() {
         description: "Could not update load status. Please try again.",
       });
     } else {
+      // Get client email for notification
+      const { data: clientProfile } = await supabase
+        .from("profiles")
+        .select("email")
+        .eq("id", currentLoad.client_id)
+        .single();
+
+      if (clientProfile?.email) {
+        const notificationType = newStatus === "In-Transit" ? "status_in_transit" : "status_delivered";
+        await sendNotification(
+          notificationType,
+          clientProfile.email,
+          {
+            id: currentLoad.id,
+            origin_address: currentLoad.origin_address,
+            destination_address: currentLoad.destination_address,
+            pickup_date: currentLoad.pickup_date,
+            driver_name: currentLoad.driver_name || undefined,
+          }
+        );
+      }
+
       toast({
         title: "Status Updated!",
         description: `Load marked as ${newStatus}.`,
