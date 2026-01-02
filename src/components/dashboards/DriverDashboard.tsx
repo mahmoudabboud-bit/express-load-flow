@@ -109,7 +109,9 @@ export function DriverDashboard() {
             destination_address: currentLoad.destination_address,
             pickup_date: currentLoad.pickup_date,
             driver_name: currentLoad.driver_name || undefined,
-          }
+          },
+          false,
+          currentLoad.client_id // for in-app notification
         );
       }
 

@@ -1,7 +1,10 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const dispatcherEmail = Deno.env.get("DISPATCHER_EMAIL");
+const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,6 +14,7 @@ const corsHeaders = {
 interface NotificationRequest {
   type: "load_submitted" | "load_approved" | "status_in_transit" | "status_delivered";
   recipientEmail: string;
+  recipientUserId?: string;
   loadData: {
     id: string;
     origin_address: string;
@@ -243,6 +247,37 @@ function getDispatcherEmailContent(loadData: NotificationRequest["loadData"], cl
   };
 }
 
+function getInAppNotificationTitle(type: string): string {
+  switch (type) {
+    case "load_submitted":
+      return "Load Request Received";
+    case "load_approved":
+      return "Load Approved!";
+    case "status_in_transit":
+      return "Shipment In Transit";
+    case "status_delivered":
+      return "Shipment Delivered";
+    default:
+      return "Notification";
+  }
+}
+
+function getInAppNotificationMessage(type: string, loadData: NotificationRequest["loadData"]): string {
+  const shortId = loadData.id.slice(0, 8);
+  switch (type) {
+    case "load_submitted":
+      return `Your load request #${shortId} from ${loadData.origin_address} to ${loadData.destination_address} has been received and is under review.`;
+    case "load_approved":
+      return `Load #${shortId} has been approved. Driver ${loadData.driver_name || "assigned"} with Truck ${loadData.truck_number || "assigned"}.`;
+    case "status_in_transit":
+      return `Your shipment #${shortId} is now in transit from ${loadData.origin_address}.`;
+    case "status_delivered":
+      return `Your shipment #${shortId} has been delivered to ${loadData.destination_address}.`;
+    default:
+      return "You have a new notification.";
+  }
+}
+
 const handler = async (req: Request): Promise<Response> => {
   console.log("send-notification function called");
   
@@ -250,11 +285,13 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
   try {
-    const { type, recipientEmail, loadData, notifyDispatcher }: NotificationRequest = await req.json();
+    const { type, recipientEmail, recipientUserId, loadData, notifyDispatcher }: NotificationRequest = await req.json();
     
     console.log(`Processing ${type} notification for load ${loadData.id}`);
-    console.log(`Recipient: ${recipientEmail}`);
+    console.log(`Recipient: ${recipientEmail}, User ID: ${recipientUserId}`);
 
     const emailContent = getEmailContent(type, loadData);
     
@@ -281,6 +318,27 @@ const handler = async (req: Request): Promise<Response> => {
     }
     
     console.log("Recipient email sent successfully:", recipientData);
+
+    // Create in-app notification if we have user ID
+    if (recipientUserId) {
+      const notificationTitle = getInAppNotificationTitle(type);
+      const notificationMessage = getInAppNotificationMessage(type, loadData);
+      
+      const { error: notifError } = await supabase.from("notifications").insert({
+        user_id: recipientUserId,
+        type,
+        title: notificationTitle,
+        message: notificationMessage,
+        load_id: loadData.id,
+        read: false,
+      });
+      
+      if (notifError) {
+        console.error("Error creating in-app notification:", notifError);
+      } else {
+        console.log("In-app notification created successfully");
+      }
+    }
 
     // If this is a load submission, also notify dispatcher
     if (notifyDispatcher && dispatcherEmail) {

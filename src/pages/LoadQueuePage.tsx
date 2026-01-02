@@ -128,7 +128,9 @@ export default function LoadQueuePage() {
             pickup_date: selectedLoad.pickup_date,
             driver_name: driverName.trim(),
             truck_number: truckNumber.trim(),
-          }
+          },
+          false,
+          selectedLoad.client_id // for in-app notification
         );
       }
       

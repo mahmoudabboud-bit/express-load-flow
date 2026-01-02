@@ -17,13 +17,15 @@ export async function sendNotification(
   type: NotificationType,
   recipientEmail: string,
   loadData: LoadData,
-  notifyDispatcher: boolean = false
+  notifyDispatcher: boolean = false,
+  recipientUserId?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const { data, error } = await supabase.functions.invoke("send-notification", {
       body: {
         type,
         recipientEmail,
+        recipientUserId,
         loadData,
         notifyDispatcher,
       },
