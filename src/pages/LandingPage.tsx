@@ -47,12 +47,12 @@ export default function LandingPage() {
               Established 2005 • 20+ Years of Experience
             </div>
             
-            <h1 className="text-5xl md:text-7xl font-bold leading-[1.1] mb-6 text-white">
+            <h1 className="text-5xl md:text-7xl font-bold leading-[1.1] mb-6 text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]">
               You Call It,
-              <span className="block text-accent mt-2">Will Haul It</span>
+              <span className="block text-accent mt-2 drop-shadow-[0_2px_8px_rgba(0,0,0,0.3)]">Will Haul It</span>
             </h1>
             
-            <p className="text-lg md:text-xl text-white/70 mb-10 max-w-xl leading-relaxed">
+            <p className="text-lg md:text-xl text-white mb-10 max-w-xl leading-relaxed drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]">
               Professional trucking and hauling services specializing in oil & gas equipment. 
               24/7 dispatch serving Texas and the entire lower 48 states.
             </p>
@@ -65,7 +65,7 @@ export default function LandingPage() {
                 </Button>
               </Link>
               <Link to="/auth">
-                <Button variant="outline" size="xl" className="w-full sm:w-auto border-white/30 text-white hover:bg-white/10 hover:border-white/50">
+                <Button size="xl" className="w-full sm:w-auto bg-white text-primary font-semibold hover:bg-white/90 border-0">
                   Sign In to Dashboard
                 </Button>
               </Link>
