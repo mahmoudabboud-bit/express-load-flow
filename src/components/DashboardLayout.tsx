@@ -2,13 +2,13 @@ import { ReactNode, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/lib/auth-context";
 import { Logo } from "@/components/Logo";
+import { NotificationBell } from "@/components/NotificationBell";
 import { Button } from "@/components/ui/button";
 import { 
   LayoutDashboard, 
   Package, 
   Truck, 
   BarChart3, 
-  Bell, 
   LogOut, 
   Menu, 
   X,
@@ -25,7 +25,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [hasNotifications] = useState(true); // Demo state
 
   const handleSignOut = async () => {
     await signOut();
@@ -57,12 +56,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <header className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-card border-b border-border h-16 flex items-center justify-between px-4">
         <Logo size="sm" />
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell size={20} />
-            {hasNotifications && (
-              <span className="absolute top-1 right-1 w-2 h-2 bg-accent rounded-full" />
-            )}
-          </Button>
+          <NotificationBell />
           <Button
             variant="ghost"
             size="icon"
@@ -146,12 +140,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </h1>
           </div>
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell size={20} />
-              {hasNotifications && (
-                <span className="absolute top-1 right-1 w-2 h-2 bg-accent rounded-full" />
-              )}
-            </Button>
+            <NotificationBell />
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 bg-secondary rounded-full flex items-center justify-center">
                 <User size={18} className="text-secondary-foreground" />

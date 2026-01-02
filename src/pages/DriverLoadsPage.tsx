@@ -108,7 +108,9 @@ export default function DriverLoadsPage() {
             destination_address: load.destination_address,
             pickup_date: load.pickup_date,
             driver_name: load.driver_name || undefined,
-          }
+          },
+          false,
+          load.client_id // for in-app notification
         );
       }
 

@@ -76,7 +76,7 @@ export default function RequestLoadPage() {
         description: error.message,
       });
     } else {
-      // Send email notifications
+      // Send email and in-app notifications
       await sendNotification(
         "load_submitted",
         user.email || "",
@@ -88,7 +88,8 @@ export default function RequestLoadPage() {
           trailer_type: formData.trailer_type,
           weight_lbs: parseInt(formData.weight_lbs),
         },
-        true // notify dispatcher
+        true, // notify dispatcher
+        user.id // recipient user ID for in-app notification
       );
 
       toast({
