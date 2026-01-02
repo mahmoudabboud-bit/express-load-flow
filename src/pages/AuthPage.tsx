@@ -130,8 +130,8 @@ export default function AuthPage() {
           </h1>
           <p className="text-primary-foreground/80 text-lg mb-12">
             {mode === "signin"
-              ? "Sign in to access your dashboard and manage your logistics."
-              : "Create an account to start managing your freight operations."}
+              ? "Sign in to access your dashboard and manage your trucking operations."
+              : "Create an account to start using our hauling and logistics services."}
           </p>
 
           <div className="space-y-4">
