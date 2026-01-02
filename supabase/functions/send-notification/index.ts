@@ -319,12 +319,21 @@ const handler = async (req: Request): Promise<Response> => {
     
     console.log("Recipient email sent successfully:", recipientData);
 
-    // Create in-app notification if we have user ID
+    // Create in-app notification for the recipient if we have user ID
+    const notificationTitle = getInAppNotificationTitle(type);
+    const notificationMessage = getInAppNotificationMessage(type, loadData);
+    
+    const notificationsToInsert: Array<{
+      user_id: string;
+      type: string;
+      title: string;
+      message: string;
+      load_id: string;
+      read: boolean;
+    }> = [];
+
     if (recipientUserId) {
-      const notificationTitle = getInAppNotificationTitle(type);
-      const notificationMessage = getInAppNotificationMessage(type, loadData);
-      
-      const { error: notifError } = await supabase.from("notifications").insert({
+      notificationsToInsert.push({
         user_id: recipientUserId,
         type,
         title: notificationTitle,
@@ -332,11 +341,49 @@ const handler = async (req: Request): Promise<Response> => {
         load_id: loadData.id,
         read: false,
       });
+    }
+
+    // Fetch all dispatcher user IDs and notify them about all load updates
+    const { data: dispatchers, error: dispatcherError } = await supabase
+      .from("user_roles")
+      .select("user_id")
+      .eq("role", "dispatcher");
+
+    if (dispatcherError) {
+      console.error("Error fetching dispatchers:", dispatcherError);
+    } else if (dispatchers && dispatchers.length > 0) {
+      const dispatcherTitle = type === "load_submitted" 
+        ? "New Load Request" 
+        : `Load #${loadData.id.slice(0, 8)} Updated`;
+      
+      const dispatcherMessage = type === "load_submitted"
+        ? `New load request #${loadData.id.slice(0, 8)} from ${loadData.origin_address} to ${loadData.destination_address}`
+        : `Load #${loadData.id.slice(0, 8)}: ${notificationTitle}`;
+
+      for (const dispatcher of dispatchers) {
+        // Avoid duplicate if dispatcher is also the recipient
+        if (dispatcher.user_id !== recipientUserId) {
+          notificationsToInsert.push({
+            user_id: dispatcher.user_id,
+            type,
+            title: dispatcherTitle,
+            message: dispatcherMessage,
+            load_id: loadData.id,
+            read: false,
+          });
+        }
+      }
+      console.log(`Adding notifications for ${dispatchers.length} dispatchers`);
+    }
+
+    // Insert all notifications at once
+    if (notificationsToInsert.length > 0) {
+      const { error: notifError } = await supabase.from("notifications").insert(notificationsToInsert);
       
       if (notifError) {
-        console.error("Error creating in-app notification:", notifError);
+        console.error("Error creating in-app notifications:", notifError);
       } else {
-        console.log("In-app notification created successfully");
+        console.log(`Created ${notificationsToInsert.length} in-app notifications successfully`);
       }
     }
 
