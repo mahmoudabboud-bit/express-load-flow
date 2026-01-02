@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
+import { sendNotification } from "@/lib/notifications";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,7 +59,7 @@ export default function RequestLoadPage() {
 
     setLoading(true);
 
-    const { error } = await supabase.from("loads").insert({
+    const { data: insertedLoad, error } = await supabase.from("loads").insert({
       client_id: user.id,
       origin_address: formData.origin_address,
       destination_address: formData.destination_address,
@@ -66,7 +67,7 @@ export default function RequestLoadPage() {
       weight_lbs: parseInt(formData.weight_lbs),
       pickup_date: formData.pickup_date,
       status: "Pending",
-    });
+    }).select().single();
 
     if (error) {
       toast({
@@ -75,6 +76,21 @@ export default function RequestLoadPage() {
         description: error.message,
       });
     } else {
+      // Send email notifications
+      await sendNotification(
+        "load_submitted",
+        user.email || "",
+        {
+          id: insertedLoad.id,
+          origin_address: formData.origin_address,
+          destination_address: formData.destination_address,
+          pickup_date: formData.pickup_date,
+          trailer_type: formData.trailer_type,
+          weight_lbs: parseInt(formData.weight_lbs),
+        },
+        true // notify dispatcher
+      );
+
       toast({
         title: "Load Requested!",
         description: "Your load has been submitted and is under review.",

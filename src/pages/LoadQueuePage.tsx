@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
+import { sendNotification } from "@/lib/notifications";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -108,6 +109,29 @@ export default function LoadQueuePage() {
         description: error.message,
       });
     } else {
+      // Get client email from profiles table
+      const { data: clientProfile } = await supabase
+        .from("profiles")
+        .select("email")
+        .eq("id", selectedLoad.client_id)
+        .single();
+
+      // Send approval notification if we have the email
+      if (clientProfile?.email) {
+        await sendNotification(
+          "load_approved",
+          clientProfile.email,
+          {
+            id: selectedLoad.id,
+            origin_address: selectedLoad.origin_address,
+            destination_address: selectedLoad.destination_address,
+            pickup_date: selectedLoad.pickup_date,
+            driver_name: driverName.trim(),
+            truck_number: truckNumber.trim(),
+          }
+        );
+      }
+      
       toast({
         title: "Load Approved!",
         description: `Assigned to ${driverName} (${truckNumber}).`,
@@ -118,7 +142,6 @@ export default function LoadQueuePage() {
 
     setApproving(false);
   };
-
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
