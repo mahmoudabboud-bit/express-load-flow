@@ -423,7 +423,11 @@ export default function LandingPage() {
               </Button>
             </Link>
             <a href="tel:+1234567890">
-              <Button variant="outline" size="xl" className="border-white/30 text-white hover:bg-white/10 hover:border-white/50">
+              <Button
+                variant="outline"
+                size="xl"
+                className="bg-background/90 text-foreground font-semibold border-border shadow-md hover:bg-background hover:text-foreground"
+              >
                 <Phone className="mr-2" size={20} />
                 Call 24/7 Dispatch
               </Button>
