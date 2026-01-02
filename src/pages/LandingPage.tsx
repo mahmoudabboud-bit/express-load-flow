@@ -439,30 +439,71 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="py-16 border-t border-border bg-card">
         <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-4 gap-12 mb-12">
-            <div className="md:col-span-2">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
+            {/* Company Info */}
+            <div>
               <Logo size="md" className="mb-6" />
-              <p className="text-muted-foreground mb-4 max-w-sm">
-                PANOCEAN INC. DBA Road Runner Express. Professional trucking and hauling 
-                services since 2005.
+              <p className="text-muted-foreground mb-4">
+                PANOCEAN INC.<br />
+                ROAD RUNNER EXPRESS<br />
+                13830 TRAILVILLE DR.<br />
+                HOUSTON, TX 77077
               </p>
               <p className="text-accent font-semibold">
                 "You Call It, Will Haul It"
               </p>
             </div>
+
+            {/* CEO & Dispatch */}
             <div>
-              <h4 className="font-semibold text-foreground mb-4">Location</h4>
-              <p className="text-muted-foreground">
-                Houston, TX<br />
-                United States
-              </p>
+              <h4 className="font-semibold text-foreground mb-4">DISPATCH 24/7</h4>
+              <ul className="text-muted-foreground space-y-2 text-sm">
+                <li className="font-medium text-foreground">CEO</li>
+                <li>
+                  <a href="mailto:dean.s@roadrunnerexpress.co" className="hover:text-accent transition-colors">
+                    dean.s@roadrunnerexpress.co
+                  </a>
+                </li>
+                <li>
+                  <a href="mailto:mike.s@roadrunnerexpress.co" className="hover:text-accent transition-colors">
+                    mike.s@roadrunnerexpress.co
+                  </a>
+                </li>
+              </ul>
             </div>
+
+            {/* Departments */}
             <div>
               <h4 className="font-semibold text-foreground mb-4">Departments</h4>
-              <ul className="text-muted-foreground space-y-2">
-                <li>Dispatch - 24/7 Available</li>
-                <li>Safety Department</li>
-                <li>Billing Department</li>
+              <ul className="text-muted-foreground space-y-3 text-sm">
+                <li>
+                  <span className="font-medium text-foreground block">Safety Department</span>
+                  <a href="mailto:safety.roadrunner.xprss@gmail.com" className="hover:text-accent transition-colors">
+                    safety.roadrunner.xprss@gmail.com
+                  </a>
+                </li>
+                <li>
+                  <span className="font-medium text-foreground block">Billing</span>
+                  <a href="mailto:billing.roadrunner.xprss@gmail.com" className="hover:text-accent transition-colors">
+                    billing.roadrunner.xprss@gmail.com
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            {/* Dispatch Contact */}
+            <div>
+              <h4 className="font-semibold text-foreground mb-4">Dispatch</h4>
+              <ul className="text-muted-foreground space-y-2 text-sm">
+                <li>
+                  <a href="mailto:roadrunner.xprss@gmail.com" className="hover:text-accent transition-colors">
+                    roadrunner.xprss@gmail.com
+                  </a>
+                </li>
+                <li className="pt-2">
+                  <span className="font-medium text-foreground block mb-1">Location</span>
+                  Houston, TX
+                </li>
               </ul>
             </div>
           </div>
