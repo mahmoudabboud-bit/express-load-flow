@@ -16,8 +16,10 @@ export default function LandingPage() {
             alt="Road Runner Express truck on highway at sunset"
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-[hsl(213,100%,8%)] via-[hsl(213,100%,8%)/90%] to-[hsl(213,100%,8%)/60%]" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[hsl(213,100%,8%)] via-transparent to-transparent opacity-60" />
+          {/* Strong left-side overlay for text readability */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[hsl(213,100%,5%)] from-0% via-[hsl(213,100%,5%)/95%] via-30% to-[hsl(213,100%,5%)/40%] to-100%" />
+          {/* Bottom fade for smooth transition */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[hsl(213,100%,5%)] via-transparent to-[hsl(213,100%,5%)/30%]" />
         </div>
 
         {/* Nav */}
