@@ -26,7 +26,7 @@ export function Logo({ variant = "dark", size = "md", className }: LogoProps) {
       {/* Custom RR Icon with Speed Lines */}
       <div className={cn(
         "relative flex items-center justify-center rounded-xl",
-        size === "sm" ? "w-8 h-8" : size === "md" ? "w-11 h-11" : "w-14 h-14"
+        size === "sm" ? "w-10 h-10" : size === "md" ? "w-14 h-14" : "w-18 h-18"
       )}
       style={{
         background: "linear-gradient(135deg, hsl(25, 100%, 50%) 0%, hsl(25, 100%, 60%) 100%)",
@@ -39,7 +39,7 @@ export function Logo({ variant = "dark", size = "md", className }: LogoProps) {
           fill="none" 
           xmlns="http://www.w3.org/2000/svg"
           className={cn(
-            size === "sm" ? "w-5 h-5" : size === "md" ? "w-7 h-7" : "w-9 h-9"
+            size === "sm" ? "w-6 h-6" : size === "md" ? "w-9 h-9" : "w-12 h-12"
           )}
         >
           {/* Speed lines on left */}
