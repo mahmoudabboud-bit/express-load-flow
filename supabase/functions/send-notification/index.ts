@@ -285,10 +285,73 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Verify JWT authentication
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader) {
+    console.error("No authorization header provided");
+    return new Response(
+      JSON.stringify({ error: "Unauthorized - No authorization header" }),
+      { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+    );
+  }
+
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+  // Verify the user's token
+  const token = authHeader.replace("Bearer ", "");
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  
+  if (authError || !user) {
+    console.error("Invalid token:", authError);
+    return new Response(
+      JSON.stringify({ error: "Unauthorized - Invalid token" }),
+      { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+    );
+  }
+
+  console.log("Authenticated user:", user.id);
 
   try {
     const { type, recipientEmail, recipientUserId, loadData, notifyDispatcher }: NotificationRequest = await req.json();
+
+    // Verify user has permission to send notifications for this load
+    // User must be: the load owner (client), a dispatcher, or a driver
+    const { data: load, error: loadError } = await supabase
+      .from("loads")
+      .select("client_id")
+      .eq("id", loadData.id)
+      .single();
+
+    if (loadError || !load) {
+      console.error("Load not found:", loadError);
+      return new Response(
+        JSON.stringify({ error: "Load not found" }),
+        { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Check if user is the load owner
+    const isLoadOwner = load.client_id === user.id;
+
+    // Check if user is a dispatcher or driver
+    const { data: userRole } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .single();
+
+    const isDispatcher = userRole?.role === "dispatcher";
+    const isDriver = userRole?.role === "driver";
+
+    if (!isLoadOwner && !isDispatcher && !isDriver) {
+      console.error("User not authorized for this load:", user.id);
+      return new Response(
+        JSON.stringify({ error: "Forbidden - You don't have permission to send notifications for this load" }),
+        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    console.log(`User ${user.id} authorized: owner=${isLoadOwner}, dispatcher=${isDispatcher}, driver=${isDriver}`);
     
     console.log(`Processing ${type} notification for load ${loadData.id}`);
     console.log(`Recipient: ${recipientEmail}, User ID: ${recipientUserId}`);
