@@ -32,7 +32,7 @@ export default function LandingPage() {
               </Button>
             </Link>
             <Link to="/auth?mode=signup">
-              <Button variant="hero" size="sm" className="shadow-accent">
+              <Button size="sm" className="bg-accent text-primary font-bold hover:bg-accent/90 shadow-lg">
                 Get Started
               </Button>
             </Link>
