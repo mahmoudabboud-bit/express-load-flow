@@ -27,7 +27,7 @@ export default function LandingPage() {
           <Logo variant="light" size="md" />
           <div className="flex items-center gap-4">
             <Link to="/auth">
-              <Button variant="ghost" className="text-white/90 hover:text-white hover:bg-white/10">
+              <Button className="bg-white/20 backdrop-blur-sm text-white font-semibold hover:bg-white/30 border border-white/30">
                 Sign In
               </Button>
             </Link>
@@ -42,7 +42,7 @@ export default function LandingPage() {
         {/* Hero Content */}
         <div className="relative z-10 container mx-auto px-4 pt-16 pb-24 md:pt-24 md:pb-32">
           <div className="max-w-2xl animate-fade-in">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-accent/20 border border-accent/30 rounded-full text-accent text-sm font-medium mb-8 backdrop-blur-sm">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/80 backdrop-blur-sm border border-white/20 rounded-full text-white text-sm font-medium mb-8 shadow-lg">
               <span className="w-2 h-2 bg-accent rounded-full animate-pulse" />
               Established 2005 • 20+ Years of Experience
             </div>
