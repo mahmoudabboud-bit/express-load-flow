@@ -5,7 +5,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Package, Truck, Clock, CheckCircle, Plus, ArrowRight } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { Package, Truck, Clock, CheckCircle, Plus, ArrowRight, Pencil, MapPin, Weight, Calendar, Loader2 } from "lucide-react";
 
 interface Load {
   id: string;
@@ -13,16 +18,29 @@ interface Load {
   destination_address: string;
   status: "Pending" | "Approved" | "In-Transit" | "Delivered";
   trailer_type: string;
+  weight_lbs: number;
   pickup_date: string;
   driver_name: string | null;
   truck_number: string | null;
   created_at: string;
 }
 
+const trailerTypes = ["Dry Van", "Reefer", "Flatbed", "Stepdeck"] as const;
+
 export function ClientDashboard() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [loads, setLoads] = useState<Load[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingLoad, setEditingLoad] = useState<Load | null>(null);
+  const [editForm, setEditForm] = useState({
+    origin_address: "",
+    destination_address: "",
+    trailer_type: "",
+    weight_lbs: "",
+    pickup_date: "",
+  });
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -44,6 +62,49 @@ export function ClientDashboard() {
       setLoads((data as Load[]) || []);
     }
     setLoading(false);
+  };
+
+  const openEditModal = (load: Load) => {
+    setEditingLoad(load);
+    setEditForm({
+      origin_address: load.origin_address,
+      destination_address: load.destination_address,
+      trailer_type: load.trailer_type,
+      weight_lbs: load.weight_lbs.toString(),
+      pickup_date: load.pickup_date,
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingLoad) return;
+
+    setSaving(true);
+    const { error } = await supabase
+      .from("loads")
+      .update({
+        origin_address: editForm.origin_address,
+        destination_address: editForm.destination_address,
+        trailer_type: editForm.trailer_type,
+        weight_lbs: parseInt(editForm.weight_lbs),
+        pickup_date: editForm.pickup_date,
+      })
+      .eq("id", editingLoad.id);
+
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Failed to update",
+        description: error.message,
+      });
+    } else {
+      toast({
+        title: "Load Updated",
+        description: "Your shipment details have been saved.",
+      });
+      setEditingLoad(null);
+      fetchLoads();
+    }
+    setSaving(false);
   };
 
   const stats = {
@@ -178,6 +239,16 @@ export function ClientDashboard() {
                       </div>
                     )}
                     <div>{new Date(load.pickup_date).toLocaleDateString()}</div>
+                    {load.status === "Pending" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openEditModal(load)}
+                      >
+                        <Pencil size={14} className="mr-1" />
+                        Edit
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -185,6 +256,97 @@ export function ClientDashboard() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Modal */}
+      <Dialog open={!!editingLoad} onOpenChange={(open) => !open && setEditingLoad(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Shipment</DialogTitle>
+            <DialogDescription>
+              Update your pending shipment details below.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-origin" className="flex items-center gap-2">
+                <MapPin size={16} className="text-status-pending" />
+                Pickup Location
+              </Label>
+              <Input
+                id="edit-origin"
+                value={editForm.origin_address}
+                onChange={(e) => setEditForm({ ...editForm, origin_address: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-destination" className="flex items-center gap-2">
+                <MapPin size={16} className="text-status-delivered" />
+                Delivery Location
+              </Label>
+              <Input
+                id="edit-destination"
+                value={editForm.destination_address}
+                onChange={(e) => setEditForm({ ...editForm, destination_address: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-trailer" className="flex items-center gap-2">
+                <Truck size={16} className="text-accent" />
+                Trailer Type
+              </Label>
+              <Select
+                value={editForm.trailer_type}
+                onValueChange={(v) => setEditForm({ ...editForm, trailer_type: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select trailer type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {trailerTypes.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-weight" className="flex items-center gap-2">
+                <Weight size={16} className="text-muted-foreground" />
+                Weight (lbs)
+              </Label>
+              <Input
+                id="edit-weight"
+                type="number"
+                min="1"
+                max="100000"
+                value={editForm.weight_lbs}
+                onChange={(e) => setEditForm({ ...editForm, weight_lbs: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-date" className="flex items-center gap-2">
+                <Calendar size={16} className="text-muted-foreground" />
+                Pickup Date
+              </Label>
+              <Input
+                id="edit-date"
+                type="date"
+                value={editForm.pickup_date}
+                onChange={(e) => setEditForm({ ...editForm, pickup_date: e.target.value })}
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <Button variant="outline" onClick={() => setEditingLoad(null)}>
+                Cancel
+              </Button>
+              <Button variant="accent" onClick={handleSaveEdit} disabled={saving}>
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Changes"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
