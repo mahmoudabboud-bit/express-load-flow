@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const dispatcherEmail = Deno.env.get("DISPATCHER_EMAIL");
@@ -11,22 +12,29 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface NotificationRequest {
-  type: "load_submitted" | "load_approved" | "status_in_transit" | "status_delivered";
-  recipientEmail: string;
-  recipientUserId?: string;
-  loadData: {
-    id: string;
-    origin_address: string;
-    destination_address: string;
-    pickup_date: string;
-    trailer_type?: string;
-    weight_lbs?: number;
-    driver_name?: string;
-    truck_number?: string;
-  };
-  notifyDispatcher?: boolean;
-}
+// Input validation schemas
+const loadDataSchema = z.object({
+  id: z.string().uuid({ message: "Invalid load ID format" }),
+  origin_address: z.string().min(1, "Origin address is required").max(500, "Origin address too long"),
+  destination_address: z.string().min(1, "Destination address is required").max(500, "Destination address too long"),
+  pickup_date: z.string().min(1, "Pickup date is required").max(50, "Pickup date too long"),
+  trailer_type: z.string().max(100, "Trailer type too long").optional().nullable(),
+  weight_lbs: z.number().int().positive().max(1000000, "Weight exceeds maximum").optional().nullable(),
+  driver_name: z.string().max(200, "Driver name too long").optional().nullable(),
+  truck_number: z.string().max(50, "Truck number too long").optional().nullable(),
+});
+
+const notificationRequestSchema = z.object({
+  type: z.enum(['load_submitted', 'load_approved', 'status_in_transit', 'status_delivered'], {
+    errorMap: () => ({ message: "Invalid notification type" })
+  }),
+  recipientEmail: z.string().email("Invalid email format").max(255, "Email too long"),
+  recipientUserId: z.string().uuid("Invalid user ID format").optional(),
+  loadData: loadDataSchema,
+  notifyDispatcher: z.boolean().optional(),
+});
+
+type NotificationRequest = z.infer<typeof notificationRequestSchema>;
 
 function getEmailContent(type: string, loadData: NotificationRequest["loadData"]) {
   const baseStyle = `
@@ -312,7 +320,34 @@ const handler = async (req: Request): Promise<Response> => {
   console.log("Authenticated user:", user.id);
 
   try {
-    const { type, recipientEmail, recipientUserId, loadData, notifyDispatcher }: NotificationRequest = await req.json();
+    // Parse and validate input
+    let rawBody: unknown;
+    try {
+      rawBody = await req.json();
+    } catch {
+      console.error("Failed to parse JSON body");
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON body" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const validationResult = notificationRequestSchema.safeParse(rawBody);
+    if (!validationResult.success) {
+      console.error("Input validation failed:", validationResult.error.errors);
+      return new Response(
+        JSON.stringify({ 
+          error: "Invalid input", 
+          details: validationResult.error.errors.map(e => ({
+            path: e.path.join('.'),
+            message: e.message
+          }))
+        }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const { type, recipientEmail, recipientUserId, loadData, notifyDispatcher } = validationResult.data;
 
     // Verify user has permission to send notifications for this load
     // User must be: the load owner (client), a dispatcher, or a driver
