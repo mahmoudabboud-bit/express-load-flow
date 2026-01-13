@@ -47,25 +47,11 @@ export default function DriverLoadsPage() {
   }, [user, userRole]);
 
   const fetchLoads = async () => {
-    // Get user's profile name for matching
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("full_name")
-      .eq("id", user?.id)
-      .maybeSingle();
-
-    const driverName = profile?.full_name || user?.user_metadata?.full_name;
-
-    if (!driverName) {
-      setLoading(false);
-      return;
-    }
-
-    // Fetch loads assigned to this driver
+    // Fetch loads assigned to this driver by driver_id
     const { data, error } = await supabase
       .from("loads")
       .select("*")
-      .ilike("driver_name", `%${driverName}%`)
+      .eq("driver_id", user?.id)
       .order("created_at", { ascending: false });
 
     if (error) {

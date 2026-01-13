@@ -23,6 +23,7 @@ export type Database = {
           created_at: string
           delivered_at: string | null
           destination_address: string
+          driver_id: string | null
           driver_name: string | null
           id: string
           in_transit_at: string | null
@@ -43,6 +44,7 @@ export type Database = {
           created_at?: string
           delivered_at?: string | null
           destination_address: string
+          driver_id?: string | null
           driver_name?: string | null
           id?: string
           in_transit_at?: string | null
@@ -63,6 +65,7 @@ export type Database = {
           created_at?: string
           delivered_at?: string | null
           destination_address?: string
+          driver_id?: string | null
           driver_name?: string | null
           id?: string
           in_transit_at?: string | null
