@@ -183,6 +183,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (!response.ok) {
       console.error("Error sending invite email:", data);
+      
+      // Check for domain verification error
+      if (data.message?.includes("verify a domain")) {
+        throw new Error("To send invites to drivers, please verify your domain at resend.com/domains. For testing, you can only send to your own email address.");
+      }
+      
       throw new Error(data.message || "Failed to send email");
     }
     
