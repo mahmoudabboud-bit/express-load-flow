@@ -14,6 +14,7 @@ import InsightsPage from "./pages/InsightsPage";
 import DriverLoadsPage from "./pages/DriverLoadsPage";
 import DriversPage from "./pages/DriversPage";
 import ClientsPage from "./pages/ClientsPage";
+import ClientProfilePage from "./pages/ClientProfilePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/dashboard/my-loads" element={<DriverLoadsPage />} />
             <Route path="/dashboard/drivers" element={<DriversPage />} />
             <Route path="/dashboard/clients" element={<ClientsPage />} />
+            <Route path="/dashboard/profile" element={<ClientProfilePage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
