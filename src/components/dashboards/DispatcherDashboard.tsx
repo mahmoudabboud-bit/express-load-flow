@@ -4,6 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/StatusBadge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { 
   Package, 
   Truck, 
@@ -11,7 +18,10 @@ import {
   CheckCircle, 
   TrendingUp,
   ArrowRight,
-  Weight
+  Weight,
+  Eye,
+  MapPin,
+  FileCheck
 } from "lucide-react";
 
 interface Load {
@@ -26,11 +36,14 @@ interface Load {
   truck_number: string | null;
   price_cents: number | null;
   created_at: string;
+  client_signature_url?: string | null;
+  delivered_at?: string | null;
 }
 
 export function DispatcherDashboard() {
   const [loads, setLoads] = useState<Load[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewingLoad, setViewingLoad] = useState<Load | null>(null);
 
   useEffect(() => {
     fetchLoads();
@@ -241,7 +254,10 @@ export function DispatcherDashboard() {
               {loads.filter(l => l.status !== "Pending").slice(0, 5).map((load) => (
                 <div
                   key={load.id}
-                  className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-secondary/30 rounded-xl gap-4"
+                  className={`flex flex-col md:flex-row md:items-center justify-between p-4 bg-secondary/30 rounded-xl gap-4 ${
+                    load.status === "Delivered" ? "cursor-pointer hover:bg-secondary/50 transition-colors" : ""
+                  }`}
+                  onClick={() => load.status === "Delivered" && setViewingLoad(load)}
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
@@ -263,6 +279,9 @@ export function DispatcherDashboard() {
                         {load.truck_number && <span> • {load.truck_number}</span>}
                       </div>
                     )}
+                    {load.status === "Delivered" && (
+                      <Eye size={16} className="text-muted-foreground" />
+                    )}
                   </div>
                 </div>
               ))}
@@ -270,6 +289,108 @@ export function DispatcherDashboard() {
           )}
         </CardContent>
       </Card>
+      {/* View Delivered Load Dialog */}
+      <Dialog open={!!viewingLoad} onOpenChange={(open) => !open && setViewingLoad(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle className="text-status-delivered" size={20} />
+              Delivered Load Details
+            </DialogTitle>
+          </DialogHeader>
+          {viewingLoad && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <StatusBadge status={viewingLoad.status} />
+                <span className="text-sm text-muted-foreground">
+                  {viewingLoad.trailer_type} • {viewingLoad.weight_lbs?.toLocaleString()} lbs
+                </span>
+              </div>
+
+              {/* Driver Info */}
+              {viewingLoad.driver_name && (
+                <div className="p-3 bg-secondary/30 rounded-lg">
+                  <Label className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
+                    <Truck size={12} />
+                    Driver
+                  </Label>
+                  <p className="font-medium text-sm">
+                    {viewingLoad.driver_name}
+                    {viewingLoad.truck_number && <span className="text-muted-foreground"> • Truck #{viewingLoad.truck_number}</span>}
+                  </p>
+                </div>
+              )}
+
+              {/* Pickup Location */}
+              <div className="p-3 bg-secondary/30 rounded-lg">
+                <Label className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
+                  <MapPin size={12} className="text-status-pending" />
+                  Pickup Location
+                </Label>
+                <p className="font-medium text-sm">{viewingLoad.origin_address}</p>
+              </div>
+
+              {/* Delivery Location */}
+              <div className="p-3 bg-secondary/30 rounded-lg">
+                <Label className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
+                  <MapPin size={12} className="text-status-delivered" />
+                  Delivery Location
+                </Label>
+                <p className="font-medium text-sm">{viewingLoad.destination_address}</p>
+              </div>
+
+              {/* Delivered Date */}
+              {viewingLoad.delivered_at && (
+                <div className="p-3 bg-status-delivered/10 rounded-lg border border-status-delivered/20">
+                  <Label className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
+                    <CheckCircle size={12} className="text-status-delivered" />
+                    Delivered On
+                  </Label>
+                  <p className="font-medium text-sm text-status-delivered">
+                    {new Date(viewingLoad.delivered_at).toLocaleString("en-US", {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                </div>
+              )}
+
+              {/* Client Signature */}
+              {viewingLoad.client_signature_url ? (
+                <div className="p-4 bg-status-delivered/10 rounded-lg border border-status-delivered/20">
+                  <Label className="text-xs text-muted-foreground flex items-center gap-1 mb-3">
+                    <FileCheck size={12} className="text-status-delivered" />
+                    Client Signature
+                  </Label>
+                  <div className="bg-white rounded-lg border border-border p-2">
+                    <img
+                      src={viewingLoad.client_signature_url}
+                      alt="Client signature"
+                      className="max-h-24 mx-auto"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 bg-muted/50 rounded-lg border border-border text-center">
+                  <p className="text-sm text-muted-foreground">No signature on file</p>
+                </div>
+              )}
+
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setViewingLoad(null)}
+              >
+                Close
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
