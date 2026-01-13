@@ -114,9 +114,10 @@ export default function LoadQueuePage() {
       price_cents: priceInCents,
     };
     
-    // Only update status if we're assigning, not editing
+    // Only update status and timestamp if we're assigning, not editing
     if (!isEditing) {
       updateData.status = "Assigned";
+      updateData.assigned_at = new Date().toISOString();
     }
 
     const { error } = await supabase

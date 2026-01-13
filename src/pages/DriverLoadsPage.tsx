@@ -78,10 +78,21 @@ export default function DriverLoadsPage() {
 
   const handleStatusUpdate = async (load: Load, newStatus: "In-Transit" | "Delivered") => {
     setUpdating(load.id);
+
+    const updateData: Record<string, unknown> = {
+      status: newStatus,
+    };
+
+    // Set the appropriate timestamp
+    if (newStatus === "In-Transit") {
+      updateData.in_transit_at = new Date().toISOString();
+    } else if (newStatus === "Delivered") {
+      updateData.delivered_at = new Date().toISOString();
+    }
     
     const { error } = await supabase
       .from("loads")
-      .update({ status: newStatus })
+      .update(updateData)
       .eq("id", load.id);
 
     if (error) {

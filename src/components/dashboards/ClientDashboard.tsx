@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignatureCapture } from "@/components/SignatureCapture";
+import { ShipmentTimeline } from "@/components/ShipmentTimeline";
 import { useToast } from "@/hooks/use-toast";
 import { Package, Truck, Clock, CheckCircle, Plus, ArrowRight, Pencil, MapPin, Weight, Calendar, Loader2, FileCheck, PenTool, Eye, DollarSign, User } from "lucide-react";
 
@@ -26,6 +27,9 @@ interface Load {
   price_cents: number | null;
   client_signature_url: string | null;
   created_at: string;
+  assigned_at: string | null;
+  in_transit_at: string | null;
+  delivered_at: string | null;
 }
 
 const trailerTypes = ["Dry Van", "Reefer", "Flatbed", "Stepdeck"] as const;
@@ -514,6 +518,18 @@ export function ClientDashboard() {
                   <span className="text-sm font-medium">Delivery Confirmed</span>
                 </div>
               )}
+
+              {/* Status Timeline */}
+              <div className="border-t pt-4 mt-4">
+                <Label className="text-sm font-medium mb-2 block">Tracking Timeline</Label>
+                <ShipmentTimeline
+                  currentStatus={viewingLoad.status}
+                  createdAt={viewingLoad.created_at}
+                  assignedAt={viewingLoad.assigned_at}
+                  inTransitAt={viewingLoad.in_transit_at}
+                  deliveredAt={viewingLoad.delivered_at}
+                />
+              </div>
 
               <div className="flex justify-end pt-4">
                 <Button variant="outline" onClick={() => setViewingLoad(null)}>
