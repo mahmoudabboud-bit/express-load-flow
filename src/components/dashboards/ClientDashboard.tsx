@@ -264,6 +264,11 @@ export function ClientDashboard() {
                     </div>
                   </div>
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    {load.price_cents && load.status !== "Pending" && (
+                      <div className="text-foreground font-semibold">
+                        ${(load.price_cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </div>
+                    )}
                     {load.driver_name && (
                       <div>
                         <span className="text-foreground font-medium">{load.driver_name}</span>

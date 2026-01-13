@@ -251,6 +251,11 @@ export default function MyShipmentsPage() {
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-2 text-sm">
+                        {load.price_cents && load.status !== "Pending" && (
+                          <div className="text-lg font-bold text-foreground">
+                            ${(load.price_cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </div>
+                        )}
                         <div className="text-muted-foreground">
                           Pickup: {new Date(load.pickup_date).toLocaleDateString()}
                         </div>
