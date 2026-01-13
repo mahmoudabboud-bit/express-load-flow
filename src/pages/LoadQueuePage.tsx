@@ -659,6 +659,16 @@ export default function LoadQueuePage() {
                 </div>
               )}
 
+              {viewingLoad.eta && (
+                <div className="p-3 bg-accent/10 rounded-lg border border-accent/20">
+                  <div className="flex items-center gap-2">
+                    <Clock size={16} className="text-accent" />
+                    <span className="text-sm text-muted-foreground">Estimated Arrival:</span>
+                    <span className="font-medium">{format(new Date(viewingLoad.eta), "PPP")}</span>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3 text-xs">
                 {viewingLoad.assigned_at && (
                   <div className="p-2 bg-muted/50 rounded">
