@@ -357,7 +357,7 @@ export default function LoadQueuePage() {
               Cancel
             </Button>
             <Button variant="accent" onClick={handleApprove} disabled={approving}>
-              {approving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Approve Load"}
+              {approving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Assign Load"}
             </Button>
           </DialogFooter>
         </DialogContent>
