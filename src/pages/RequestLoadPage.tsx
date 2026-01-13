@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Truck, Weight, Calendar, Loader2, ArrowLeft } from "lucide-react";
+import { MapPin, Truck, Weight, Calendar, Loader2, ArrowLeft, DollarSign } from "lucide-react";
 import { Navigate, Link } from "react-router-dom";
 
 const trailerTypes = ["Dry Van", "Reefer", "Flatbed", "Stepdeck"] as const;
@@ -27,6 +27,7 @@ export default function RequestLoadPage() {
     trailer_type: "" as typeof trailerTypes[number] | "",
     weight_lbs: "",
     pickup_date: "",
+    price: "",
   });
 
   if (authLoading) {
@@ -48,7 +49,7 @@ export default function RequestLoadPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.origin_address || !formData.destination_address || !formData.trailer_type || !formData.weight_lbs || !formData.pickup_date) {
+    if (!formData.origin_address || !formData.destination_address || !formData.trailer_type || !formData.weight_lbs || !formData.pickup_date || !formData.price) {
       toast({
         variant: "destructive",
         title: "Missing fields",
@@ -66,6 +67,7 @@ export default function RequestLoadPage() {
       trailer_type: formData.trailer_type,
       weight_lbs: parseInt(formData.weight_lbs),
       pickup_date: formData.pickup_date,
+      price_cents: Math.round(parseFloat(formData.price) * 100),
       status: "Pending",
     }).select().single();
 
@@ -199,6 +201,23 @@ export default function RequestLoadPage() {
                   min={new Date().toISOString().split("T")[0]}
                   value={formData.pickup_date}
                   onChange={(e) => setFormData({ ...formData, pickup_date: e.target.value })}
+                />
+              </div>
+
+              {/* Price */}
+              <div className="space-y-2">
+                <Label htmlFor="price" className="flex items-center gap-2">
+                  <DollarSign size={16} className="text-status-delivered" />
+                  Price ($)
+                </Label>
+                <Input
+                  id="price"
+                  type="number"
+                  placeholder="2500.00"
+                  min="0"
+                  step="0.01"
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                 />
               </div>
 
