@@ -70,7 +70,13 @@ export function DispatcherDashboard() {
           <h1 className="text-2xl font-bold text-foreground">Dispatch Center</h1>
           <p className="text-muted-foreground">Manage loads and track operations.</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
+          <Link to="/dashboard/drivers">
+            <Button variant="outline">
+              <Truck className="mr-2" size={18} />
+              Manage Drivers
+            </Button>
+          </Link>
           <Link to="/dashboard/queue">
             <Button variant="outline">
               <Package className="mr-2" size={18} />

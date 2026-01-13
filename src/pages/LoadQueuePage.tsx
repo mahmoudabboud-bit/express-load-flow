@@ -32,7 +32,13 @@ interface Load {
 
 interface Driver {
   id: string;
-  full_name: string | null;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  truck_type: string;
+  truck_number: string;
+  email: string;
+  active: boolean;
 }
 
 export default function LoadQueuePage() {
@@ -63,22 +69,17 @@ export default function LoadQueuePage() {
   }, [user, userRole]);
 
   const fetchDrivers = async () => {
-    // Get all users with driver role
-    const { data: driverRoles } = await supabase
-      .from("user_roles")
-      .select("user_id")
-      .eq("role", "driver");
+    // Fetch from the drivers table
+    const { data, error } = await supabase
+      .from("drivers")
+      .select("*")
+      .eq("active", true)
+      .order("last_name", { ascending: true });
 
-    if (driverRoles && driverRoles.length > 0) {
-      const driverIds = driverRoles.map(r => r.user_id);
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, full_name")
-        .in("id", driverIds);
-
-      if (profiles) {
-        setDrivers(profiles);
-      }
+    if (error) {
+      console.error("Error fetching drivers:", error);
+    } else if (data) {
+      setDrivers(data);
     }
   };
 
@@ -119,8 +120,9 @@ export default function LoadQueuePage() {
   const handleDriverSelect = (driverId: string) => {
     setSelectedDriverId(driverId);
     const driver = drivers.find(d => d.id === driverId);
-    if (driver?.full_name) {
-      setDriverName(driver.full_name);
+    if (driver) {
+      setDriverName(`${driver.first_name} ${driver.last_name}`);
+      setTruckNumber(driver.truck_number);
     }
   };
 
@@ -135,6 +137,7 @@ export default function LoadQueuePage() {
     }
 
     const selectedDriver = drivers.find(d => d.id === selectedDriverId);
+    const driverFullName = selectedDriver ? `${selectedDriver.first_name} ${selectedDriver.last_name}` : driverName.trim();
 
     const priceInCents = Math.round(parseFloat(price) * 100);
     if (isNaN(priceInCents) || priceInCents <= 0) {
@@ -149,8 +152,8 @@ export default function LoadQueuePage() {
     setApproving(true);
 
     const updateData: Record<string, unknown> = {
-      driver_id: selectedDriverId,
-      driver_name: selectedDriver?.full_name || driverName.trim(),
+      driver_id: selectedDriver?.user_id || null,
+      driver_name: driverFullName,
       truck_number: truckNumber.trim(),
       price_cents: priceInCents,
     };
@@ -381,11 +384,17 @@ export default function LoadQueuePage() {
                     <SelectValue placeholder="Select a driver" />
                   </SelectTrigger>
                   <SelectContent>
-                    {drivers.map((driver) => (
-                      <SelectItem key={driver.id} value={driver.id}>
-                        {driver.full_name || "Unnamed Driver"}
-                      </SelectItem>
-                    ))}
+                    {drivers.length === 0 ? (
+                      <div className="px-3 py-2 text-sm text-muted-foreground">
+                        No drivers available. <Link to="/dashboard/drivers" className="text-accent underline">Add drivers first</Link>.
+                      </div>
+                    ) : (
+                      drivers.map((driver) => (
+                        <SelectItem key={driver.id} value={driver.id}>
+                          {driver.first_name} {driver.last_name} - {driver.truck_type} ({driver.truck_number})
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>

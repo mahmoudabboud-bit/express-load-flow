@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      drivers: {
+        Row: {
+          active: boolean
+          created_at: string
+          email: string
+          first_name: string
+          id: string
+          last_name: string
+          truck_number: string
+          truck_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          email: string
+          first_name: string
+          id?: string
+          last_name: string
+          truck_number: string
+          truck_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          email?: string
+          first_name?: string
+          id?: string
+          last_name?: string
+          truck_number?: string
+          truck_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       loads: {
         Row: {
           assigned_at: string | null
