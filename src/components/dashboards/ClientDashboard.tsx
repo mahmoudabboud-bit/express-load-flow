@@ -513,9 +513,21 @@ export function ClientDashboard() {
               )}
 
               {viewingLoad.client_signature_url && (
-                <div className="flex items-center gap-2 text-status-delivered">
-                  <FileCheck size={16} />
-                  <span className="text-sm font-medium">Delivery Confirmed</span>
+                <div className="p-4 bg-status-delivered/10 rounded-lg border border-status-delivered/20">
+                  <Label className="text-xs text-muted-foreground flex items-center gap-1 mb-3">
+                    <FileCheck size={12} className="text-status-delivered" />
+                    Receiver Signature
+                  </Label>
+                  <div className="bg-white rounded-lg border border-border p-2">
+                    <img 
+                      src={viewingLoad.client_signature_url} 
+                      alt="Delivery signature" 
+                      className="max-h-24 mx-auto"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground text-center mt-2">
+                    Delivery confirmed on {viewingLoad.delivered_at ? new Date(viewingLoad.delivered_at).toLocaleString() : 'N/A'}
+                  </p>
                 </div>
               )}
 
