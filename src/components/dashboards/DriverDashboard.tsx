@@ -19,12 +19,13 @@ interface Load {
   id: string;
   origin_address: string;
   destination_address: string;
-  status: "Pending" | "Approved" | "In-Transit" | "Delivered";
+  status: "Pending" | "Assigned" | "In-Transit" | "Delivered";
   trailer_type: string;
   weight_lbs: number;
   pickup_date: string;
   driver_name: string | null;
   truck_number: string | null;
+  price_cents: number | null;
   client_id: string;
 }
 
@@ -68,7 +69,7 @@ export function DriverDashboard() {
       console.error("Error fetching loads:", error);
     } else {
       const loads = (data as Load[]) || [];
-      const active = loads.find(l => l.status === "Approved" || l.status === "In-Transit");
+      const active = loads.find(l => l.status === "Assigned" || l.status === "In-Transit");
       setCurrentLoad(active || null);
       setCompletedLoads(loads.filter(l => l.status === "Delivered"));
     }
@@ -222,18 +223,18 @@ export function DriverDashboard() {
 
             {/* Status Actions */}
             <div className="space-y-3 pt-4">
-              {currentLoad.status === "Approved" && (
-                <Button
-                  variant="driver-action"
-                  size="xl"
-                  className="w-full py-6 text-lg"
-                  onClick={() => handleStatusUpdate("In-Transit")}
-                  disabled={updating}
-                >
-                  <Truck className="mr-3" size={24} />
-                  Mark as Picked Up
-                </Button>
-              )}
+            {currentLoad.status === "Assigned" && (
+              <Button
+                variant="driver-action"
+                size="xl"
+                className="w-full py-6 text-lg"
+                onClick={() => handleStatusUpdate("In-Transit")}
+                disabled={updating}
+              >
+                <Truck className="mr-3" size={24} />
+                Mark as Picked Up
+              </Button>
+            )}
 
               {currentLoad.status === "In-Transit" && (
                 <Button

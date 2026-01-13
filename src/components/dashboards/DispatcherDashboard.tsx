@@ -18,12 +18,13 @@ interface Load {
   id: string;
   origin_address: string;
   destination_address: string;
-  status: "Pending" | "Approved" | "In-Transit" | "Delivered";
+  status: "Pending" | "Assigned" | "In-Transit" | "Delivered";
   trailer_type: string;
   weight_lbs: number;
   pickup_date: string;
   driver_name: string | null;
   truck_number: string | null;
+  price_cents: number | null;
   created_at: string;
 }
 
@@ -53,6 +54,7 @@ export function DispatcherDashboard() {
   const stats = {
     total: loads.length,
     pending: loads.filter((l) => l.status === "Pending").length,
+    assigned: loads.filter((l) => l.status === "Assigned").length,
     inTransit: loads.filter((l) => l.status === "In-Transit").length,
     delivered: loads.filter((l) => l.status === "Delivered").length,
     totalWeight: loads.reduce((acc, l) => acc + (l.weight_lbs || 0), 0),

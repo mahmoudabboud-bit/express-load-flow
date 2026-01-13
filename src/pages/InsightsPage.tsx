@@ -11,10 +11,11 @@ import { useToast } from "@/hooks/use-toast";
 
 interface Load {
   id: string;
-  status: "Pending" | "Approved" | "In-Transit" | "Delivered";
+  status: "Pending" | "Assigned" | "In-Transit" | "Delivered";
   weight_lbs: number;
   created_at: string;
   trailer_type: string;
+  price_cents: number | null;
 }
 
 export default function InsightsPage() {
@@ -63,7 +64,7 @@ export default function InsightsPage() {
   const totalLoads = loads.length;
   const deliveredLoads = loads.filter(l => l.status === "Delivered").length;
   const activeTonnage = loads
-    .filter(l => l.status === "In-Transit" || l.status === "Approved")
+    .filter(l => l.status === "In-Transit" || l.status === "Assigned")
     .reduce((acc, l) => acc + (l.weight_lbs || 0), 0);
   const totalTonnage = loads.reduce((acc, l) => acc + (l.weight_lbs || 0), 0);
 
@@ -94,7 +95,7 @@ export default function InsightsPage() {
   // Status distribution
   const statusData = [
     { name: "Pending", value: loads.filter(l => l.status === "Pending").length, color: "hsl(45, 93%, 47%)" },
-    { name: "Approved", value: loads.filter(l => l.status === "Approved").length, color: "hsl(213, 80%, 50%)" },
+    { name: "Assigned", value: loads.filter(l => l.status === "Assigned").length, color: "hsl(213, 80%, 50%)" },
     { name: "In-Transit", value: loads.filter(l => l.status === "In-Transit").length, color: "hsl(213, 80%, 50%)" },
     { name: "Delivered", value: loads.filter(l => l.status === "Delivered").length, color: "hsl(142, 70%, 45%)" },
   ].filter(d => d.value > 0);
