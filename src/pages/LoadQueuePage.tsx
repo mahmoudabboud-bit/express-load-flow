@@ -12,7 +12,17 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Package, ArrowLeft, Loader2, Filter, UserCheck, Truck, DollarSign, Pencil, Eye, MapPin, FileCheck, CheckCircle } from "lucide-react";
+import { Package, ArrowLeft, Loader2, Filter, UserCheck, Truck, DollarSign, Pencil, Eye, MapPin, FileCheck, CheckCircle, User, Phone } from "lucide-react";
+
+interface Client {
+  id: string;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone_number: string;
+  address: string;
+}
 
 interface Load {
   id: string;
@@ -32,6 +42,7 @@ interface Load {
   delivered_at: string | null;
   assigned_at: string | null;
   in_transit_at: string | null;
+  client?: Client | null;
 }
 
 interface Driver {
@@ -64,6 +75,7 @@ export default function LoadQueuePage() {
   const [price, setPrice] = useState("");
   const [approving, setApproving] = useState(false);
   const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [viewingLoad, setViewingLoad] = useState<Load | null>(null);
 
@@ -71,6 +83,7 @@ export default function LoadQueuePage() {
     if (user && userRole === "dispatcher") {
       fetchLoads();
       fetchDrivers();
+      fetchClients();
     }
   }, [user, userRole]);
 
@@ -124,6 +137,19 @@ export default function LoadQueuePage() {
     }
   }, [searchParams, loads]);
 
+  const fetchClients = async () => {
+    const { data, error } = await supabase
+      .from("clients")
+      .select("*")
+      .order("last_name", { ascending: true });
+
+    if (error) {
+      console.error("Error fetching clients:", error);
+    } else {
+      setClients(data || []);
+    }
+  };
+
   const fetchLoads = async () => {
     const { data, error } = await supabase
       .from("loads")
@@ -136,6 +162,12 @@ export default function LoadQueuePage() {
       setLoads((data as Load[]) || []);
     }
     setLoading(false);
+  };
+
+  // Helper to get client info for a load
+  const getClientForLoad = (load: Load): Client | null => {
+    // First try to match by client_id === user_id in clients table
+    return clients.find(c => c.user_id === load.client_id) || null;
   };
 
   const openApprovalModal = (load: Load, editing = false) => {
@@ -318,33 +350,41 @@ export default function LoadQueuePage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {filteredLoads.map((load) => (
-                  <div
-                    key={load.id}
-                    className="p-5 bg-secondary/30 rounded-xl border border-border/50 hover:border-accent/30 transition-colors"
-                  >
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex flex-wrap items-center gap-2 mb-3">
-                          <StatusBadge status={load.status} />
-                          <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
-                            {load.trailer_type}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {load.weight_lbs.toLocaleString()} lbs
-                          </span>
-                        </div>
-                        <div className="text-sm mb-2">
-                          <div className="flex items-start gap-2">
-                            <span className="w-16 text-muted-foreground shrink-0">From:</span>
-                            <span className="font-medium">{load.origin_address}</span>
+                {filteredLoads.map((load) => {
+                  const client = getClientForLoad(load);
+                  return (
+                    <div
+                      key={load.id}
+                      className="p-5 bg-secondary/30 rounded-xl border border-border/50 hover:border-accent/30 transition-colors"
+                    >
+                      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex flex-wrap items-center gap-2 mb-3">
+                            <StatusBadge status={load.status} />
+                            <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                              {load.trailer_type}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {load.weight_lbs.toLocaleString()} lbs
+                            </span>
+                            {client && (
+                              <span className="text-xs bg-accent/10 text-accent px-2 py-1 rounded flex items-center gap-1">
+                                <User size={12} />
+                                {client.first_name} {client.last_name}
+                              </span>
+                            )}
                           </div>
-                          <div className="flex items-start gap-2 mt-1">
-                            <span className="w-16 text-muted-foreground shrink-0">To:</span>
-                            <span className="font-medium">{load.destination_address}</span>
+                          <div className="text-sm mb-2">
+                            <div className="flex items-start gap-2">
+                              <span className="w-16 text-muted-foreground shrink-0">From:</span>
+                              <span className="font-medium">{load.origin_address}</span>
+                            </div>
+                            <div className="flex items-start gap-2 mt-1">
+                              <span className="w-16 text-muted-foreground shrink-0">To:</span>
+                              <span className="font-medium">{load.destination_address}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
                       <div className="flex flex-col lg:flex-row items-start lg:items-center gap-3">
                         <div className="text-sm text-right">
                           <div className="text-muted-foreground">
@@ -399,7 +439,8 @@ export default function LoadQueuePage() {
                       </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>
@@ -416,10 +457,19 @@ export default function LoadQueuePage() {
             </DialogDescription>
           </DialogHeader>
 
-          {selectedLoad && (
+          {selectedLoad && (() => {
+            const selectedClient = getClientForLoad(selectedLoad);
+            return (
             <div className="space-y-4">
               <div className="p-4 bg-secondary/50 rounded-lg text-sm">
                 <div className="font-medium mb-2">{selectedLoad.trailer_type} • {selectedLoad.weight_lbs.toLocaleString()} lbs</div>
+                {selectedClient && (
+                  <div className="mb-2 pb-2 border-b border-border/50">
+                    <span className="text-muted-foreground">Client:</span>{" "}
+                    <span className="font-medium">{selectedClient.first_name} {selectedClient.last_name}</span>
+                    <span className="text-muted-foreground"> ({selectedClient.phone_number})</span>
+                  </div>
+                )}
                 <div><span className="text-muted-foreground">From:</span> {selectedLoad.origin_address}</div>
                 <div><span className="text-muted-foreground">To:</span> {selectedLoad.destination_address}</div>
                 <div><span className="text-muted-foreground">Pickup:</span> {new Date(selectedLoad.pickup_date).toLocaleDateString()}</div>
@@ -489,17 +539,18 @@ export default function LoadQueuePage() {
                   onChange={(e) => setPrice(e.target.value)}
                 />
               </div>
-            </div>
-          )}
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setApprovalModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="accent" onClick={handleApprove} disabled={approving}>
-              {approving ? <Loader2 className="w-4 h-4 animate-spin" /> : isEditing ? "Save Changes" : "Assign Load"}
-            </Button>
-          </DialogFooter>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setApprovalModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button variant="accent" onClick={handleApprove} disabled={approving}>
+                  {approving ? <Loader2 className="w-4 h-4 animate-spin" /> : isEditing ? "Save Changes" : "Assign Load"}
+                </Button>
+              </DialogFooter>
+            </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
@@ -513,7 +564,9 @@ export default function LoadQueuePage() {
             </DialogTitle>
           </DialogHeader>
 
-          {viewingLoad && (
+          {viewingLoad && (() => {
+            const viewClient = getClientForLoad(viewingLoad);
+            return (
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <StatusBadge status={viewingLoad.status} />
@@ -521,6 +574,24 @@ export default function LoadQueuePage() {
                   {viewingLoad.trailer_type} • {viewingLoad.weight_lbs.toLocaleString()} lbs
                 </span>
               </div>
+
+              {/* Client Info */}
+              {viewClient && (
+                <div className="p-3 bg-accent/10 rounded-lg border border-accent/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <User size={16} className="text-accent" />
+                    <span className="font-medium">Client</span>
+                  </div>
+                  <div className="text-sm">
+                    <div className="font-medium">{viewClient.first_name} {viewClient.last_name}</div>
+                    <div className="text-muted-foreground">{viewClient.email}</div>
+                    <div className="flex items-center gap-1 text-muted-foreground mt-1">
+                      <Phone size={12} />
+                      {viewClient.phone_number}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="grid gap-3 text-sm">
                 <div className="flex items-start gap-3">
@@ -599,7 +670,8 @@ export default function LoadQueuePage() {
                 </div>
               )}
             </div>
-          )}
+            );
+          })()}
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setViewingLoad(null)}>
