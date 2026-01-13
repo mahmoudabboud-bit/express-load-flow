@@ -12,7 +12,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Package, ArrowLeft, Loader2, Filter, UserCheck, Truck, DollarSign } from "lucide-react";
+import { Package, ArrowLeft, Loader2, Filter, UserCheck, Truck, DollarSign, Pencil } from "lucide-react";
 
 interface Load {
   id: string;
@@ -45,6 +45,7 @@ export default function LoadQueuePage() {
   const [truckNumber, setTruckNumber] = useState("");
   const [price, setPrice] = useState("");
   const [approving, setApproving] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     if (user && userRole === "dispatcher") {
@@ -76,11 +77,12 @@ export default function LoadQueuePage() {
     setLoading(false);
   };
 
-  const openApprovalModal = (load: Load) => {
+  const openApprovalModal = (load: Load, editing = false) => {
     setSelectedLoad(load);
-    setDriverName("");
-    setTruckNumber("");
-    setPrice("");
+    setIsEditing(editing);
+    setDriverName(editing ? load.driver_name || "" : "");
+    setTruckNumber(editing ? load.truck_number || "" : "");
+    setPrice(editing && load.price_cents ? (load.price_cents / 100).toFixed(2) : "");
     setApprovalModalOpen(true);
   };
 
@@ -106,51 +108,60 @@ export default function LoadQueuePage() {
 
     setApproving(true);
 
+    const updateData: Record<string, unknown> = {
+      driver_name: driverName.trim(),
+      truck_number: truckNumber.trim(),
+      price_cents: priceInCents,
+    };
+    
+    // Only update status if we're assigning, not editing
+    if (!isEditing) {
+      updateData.status = "Assigned";
+    }
+
     const { error } = await supabase
       .from("loads")
-      .update({
-        status: "Assigned",
-        driver_name: driverName.trim(),
-        truck_number: truckNumber.trim(),
-        price_cents: priceInCents,
-      })
+      .update(updateData)
       .eq("id", selectedLoad.id);
 
     if (error) {
       toast({
         variant: "destructive",
-        title: "Failed to approve",
+        title: isEditing ? "Failed to update" : "Failed to assign",
         description: error.message,
       });
     } else {
-      // Get client email from profiles table
-      const { data: clientProfile } = await supabase
-        .from("profiles")
-        .select("email")
-        .eq("id", selectedLoad.client_id)
-        .single();
+      // Only send notification for new assignments, not edits
+      if (!isEditing) {
+        // Get client email from profiles table
+        const { data: clientProfile } = await supabase
+          .from("profiles")
+          .select("email")
+          .eq("id", selectedLoad.client_id)
+          .single();
 
-      // Send approval notification if we have the email
-      if (clientProfile?.email) {
-        await sendNotification(
-          "load_approved",
-          clientProfile.email,
-          {
-            id: selectedLoad.id,
-            origin_address: selectedLoad.origin_address,
-            destination_address: selectedLoad.destination_address,
-            pickup_date: selectedLoad.pickup_date,
-            driver_name: driverName.trim(),
-            truck_number: truckNumber.trim(),
-          },
-          false,
-          selectedLoad.client_id // for in-app notification
-        );
+        // Send approval notification if we have the email
+        if (clientProfile?.email) {
+          await sendNotification(
+            "load_approved",
+            clientProfile.email,
+            {
+              id: selectedLoad.id,
+              origin_address: selectedLoad.origin_address,
+              destination_address: selectedLoad.destination_address,
+              pickup_date: selectedLoad.pickup_date,
+              driver_name: driverName.trim(),
+              truck_number: truckNumber.trim(),
+            },
+            false,
+            selectedLoad.client_id // for in-app notification
+          );
+        }
       }
       
       toast({
-        title: "Load Approved!",
-        description: `Assigned to ${driverName} (${truckNumber}).`,
+        title: isEditing ? "Load Updated!" : "Load Assigned!",
+        description: `${isEditing ? "Updated" : "Assigned"} to ${driverName} (${truckNumber}).`,
       });
       setApprovalModalOpen(false);
       fetchLoads();
@@ -273,10 +284,20 @@ export default function LoadQueuePage() {
                           <Button
                             variant="accent"
                             size="sm"
-                            onClick={() => openApprovalModal(load)}
+                            onClick={() => openApprovalModal(load, false)}
                           >
                             <UserCheck className="mr-2" size={16} />
                             Approve & Assign
+                          </Button>
+                        )}
+                        {load.status === "Assigned" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openApprovalModal(load, true)}
+                          >
+                            <Pencil className="mr-2" size={16} />
+                            Edit
                           </Button>
                         )}
                       </div>
@@ -293,9 +314,9 @@ export default function LoadQueuePage() {
       <Dialog open={approvalModalOpen} onOpenChange={setApprovalModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Approve & Assign Driver</DialogTitle>
+            <DialogTitle>{isEditing ? "Edit Assignment" : "Approve & Assign Driver"}</DialogTitle>
             <DialogDescription>
-              Assign a driver and truck to this load.
+              {isEditing ? "Update driver, truck, or price details." : "Assign a driver and truck to this load."}
             </DialogDescription>
           </DialogHeader>
 
@@ -357,7 +378,7 @@ export default function LoadQueuePage() {
               Cancel
             </Button>
             <Button variant="accent" onClick={handleApprove} disabled={approving}>
-              {approving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Assign Load"}
+              {approving ? <Loader2 className="w-4 h-4 animate-spin" /> : isEditing ? "Save Changes" : "Assign Load"}
             </Button>
           </DialogFooter>
         </DialogContent>
