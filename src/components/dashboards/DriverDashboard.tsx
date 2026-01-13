@@ -24,6 +24,10 @@ interface Load {
   trailer_type: string;
   weight_lbs: number;
   pickup_date: string;
+  pickup_time: string | null;
+  delivery_date: string | null;
+  delivery_time: string | null;
+  eta: string | null;
   driver_name: string | null;
   truck_number: string | null;
   price_cents: number | null;
@@ -260,7 +264,7 @@ export function DriverDashboard() {
               </Button>
             </div>
 
-            {/* Pickup Date */}
+            {/* Pickup Date/Time */}
             <div className="flex items-center gap-3 p-4 bg-secondary/50 rounded-xl">
               <Clock className="text-muted-foreground" size={20} />
               <div>
@@ -272,9 +276,29 @@ export function DriverDashboard() {
                     month: "long",
                     day: "numeric",
                   })}
+                  {currentLoad.pickup_time && ` at ${currentLoad.pickup_time.slice(0, 5)}`}
                 </p>
               </div>
             </div>
+
+            {/* ETA */}
+            {currentLoad.eta && (
+              <div className="flex items-center gap-3 p-4 bg-accent/10 rounded-xl border border-accent/30">
+                <Clock className="text-accent" size={20} />
+                <div>
+                  <p className="text-xs text-muted-foreground">Expected Arrival (ETA)</p>
+                  <p className="font-semibold text-accent">
+                    {new Date(currentLoad.eta).toLocaleString("en-US", {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Status Actions */}
             <div className="space-y-3 pt-4">

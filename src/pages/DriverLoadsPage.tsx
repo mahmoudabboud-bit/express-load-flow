@@ -37,6 +37,10 @@ interface Load {
   trailer_type: string;
   weight_lbs: number;
   pickup_date: string;
+  pickup_time: string | null;
+  delivery_date: string | null;
+  delivery_time: string | null;
+  eta: string | null;
   driver_name: string | null;
   truck_number: string | null;
   price_cents: number | null;
@@ -308,7 +312,7 @@ export default function DriverLoadsPage() {
                           </Button>
                         </div>
 
-                        {/* Pickup Date */}
+                        {/* Pickup Date/Time */}
                         <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg mb-4">
                           <Clock className="text-muted-foreground" size={18} />
                           <div>
@@ -319,9 +323,29 @@ export default function DriverLoadsPage() {
                                 month: "short",
                                 day: "numeric",
                               })}
+                              {load.pickup_time && ` at ${load.pickup_time.slice(0, 5)}`}
                             </p>
                           </div>
                         </div>
+
+                        {/* ETA */}
+                        {load.eta && (
+                          <div className="flex items-center gap-3 p-3 bg-accent/10 rounded-lg border border-accent/30 mb-4">
+                            <Clock className="text-accent" size={18} />
+                            <div>
+                              <p className="text-xs text-muted-foreground">Expected Arrival (ETA)</p>
+                              <p className="font-medium text-sm text-accent">
+                                {new Date(load.eta).toLocaleString("en-US", {
+                                  weekday: "short",
+                                  month: "short",
+                                  day: "numeric",
+                                  hour: "numeric",
+                                  minute: "2-digit",
+                                })}
+                              </p>
+                            </div>
+                          </div>
+                        )}
 
                         {/* Actions */}
                         {load.status === "Assigned" && (
