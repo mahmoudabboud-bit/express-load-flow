@@ -35,6 +35,9 @@ interface Load {
   trailer_type: string;
   weight_lbs: number;
   pickup_date: string;
+  pickup_time: string | null;
+  delivery_date: string | null;
+  delivery_time: string | null;
   driver_name: string | null;
   truck_number: string | null;
   price_cents: number | null;
@@ -686,16 +689,26 @@ export default function LoadQueuePage() {
               <div className="grid gap-3 text-sm">
                 <div className="flex items-start gap-3">
                   <MapPin size={16} className="text-green-500 mt-0.5 shrink-0" />
-                  <div>
+                  <div className="flex-1">
                     <div className="text-muted-foreground text-xs">Pickup</div>
                     <div className="font-medium">{viewingLoad.origin_address}</div>
+                    <div className="text-muted-foreground text-xs mt-1">
+                      {new Date(viewingLoad.pickup_date).toLocaleDateString()}
+                      {viewingLoad.pickup_time && ` at ${viewingLoad.pickup_time.slice(0, 5)}`}
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <MapPin size={16} className="text-accent mt-0.5 shrink-0" />
-                  <div>
+                  <div className="flex-1">
                     <div className="text-muted-foreground text-xs">Delivery</div>
                     <div className="font-medium">{viewingLoad.destination_address}</div>
+                    {viewingLoad.delivery_date && (
+                      <div className="text-muted-foreground text-xs mt-1">
+                        {new Date(viewingLoad.delivery_date).toLocaleDateString()}
+                        {viewingLoad.delivery_time && ` at ${viewingLoad.delivery_time.slice(0, 5)}`}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
