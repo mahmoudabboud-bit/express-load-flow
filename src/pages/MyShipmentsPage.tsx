@@ -24,6 +24,9 @@ interface Load {
   trailer_type: string;
   weight_lbs: number;
   pickup_date: string;
+  pickup_time: string | null;
+  delivery_date: string | null;
+  delivery_time: string | null;
   driver_name: string | null;
   truck_number: string | null;
   price_cents: number | null;
@@ -444,6 +447,10 @@ export default function MyShipmentsPage() {
                       Pickup Location
                     </Label>
                     <p className="text-sm font-medium">{viewingLoad.origin_address}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(viewingLoad.pickup_date).toLocaleDateString()}
+                      {viewingLoad.pickup_time && ` at ${viewingLoad.pickup_time.slice(0, 5)}`}
+                    </p>
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground flex items-center gap-1">
@@ -451,6 +458,12 @@ export default function MyShipmentsPage() {
                       Delivery Location
                     </Label>
                     <p className="text-sm font-medium">{viewingLoad.destination_address}</p>
+                    {viewingLoad.delivery_date && (
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(viewingLoad.delivery_date).toLocaleDateString()}
+                        {viewingLoad.delivery_time && ` at ${viewingLoad.delivery_time.slice(0, 5)}`}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -472,9 +485,14 @@ export default function MyShipmentsPage() {
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground flex items-center gap-1">
                       <Calendar size={12} />
-                      Pickup Date
+                      Pickup
                     </Label>
-                    <p className="text-sm font-medium">{new Date(viewingLoad.pickup_date).toLocaleDateString()}</p>
+                    <p className="text-sm font-medium">
+                      {new Date(viewingLoad.pickup_date).toLocaleDateString()}
+                      {viewingLoad.pickup_time && (
+                        <span className="text-muted-foreground"> {viewingLoad.pickup_time.slice(0, 5)}</span>
+                      )}
+                    </p>
                   </div>
                 </div>
 
