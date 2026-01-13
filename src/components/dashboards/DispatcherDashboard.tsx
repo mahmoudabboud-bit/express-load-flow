@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/StatusBadge";
+import { SignedImage } from "@/components/SignedImage";
 import {
   Dialog,
   DialogContent,
@@ -374,7 +375,7 @@ export function DispatcherDashboard() {
                     Client Signature
                   </Label>
                   <div className="bg-white rounded-lg border border-border p-2">
-                    <img
+                    <SignedImage
                       src={viewingLoad.client_signature_url}
                       alt="Client signature"
                       className="max-h-24 mx-auto"

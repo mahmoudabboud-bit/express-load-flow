@@ -1,5 +1,5 @@
 import { jsPDF } from "jspdf";
-
+import { getSignedUrl } from "@/hooks/useSignedUrl";
 interface LoadData {
   id: string;
   origin_address: string;
@@ -139,8 +139,12 @@ export async function generateDeliveryReceipt(load: LoadData): Promise<void> {
     doc.line(20, driverY + 28, 190, driverY + 28);
     
     try {
+      // Get signed URL for private storage bucket
+      const signedUrl = await getSignedUrl(load.client_signature_url);
+      if (!signedUrl) throw new Error("Failed to get signed URL");
+      
       // Fetch and embed the signature image
-      const response = await fetch(load.client_signature_url);
+      const response = await fetch(signedUrl);
       const blob = await response.blob();
       const reader = new FileReader();
       
