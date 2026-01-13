@@ -114,15 +114,15 @@ function getEmailContent(type: string, loadData: NotificationRequest["loadData"]
 
     case "load_approved":
       return {
-        subject: `Load #${loadData.id.slice(0, 8)} Approved - Driver Assigned`,
+        subject: `Load #${loadData.id.slice(0, 8)} Assigned - Driver Ready`,
         html: `
           <div style="${baseStyle}">
             <div style="${headerStyle}">
               <h1 style="margin: 0; font-size: 28px;">🚚 Road Runner Express</h1>
             </div>
             <div style="${contentStyle}">
-              <h2 style="color: #002147; margin-top: 0;">Great News! Your Load is Approved ✓</h2>
-              <p>Your shipment has been approved and a driver has been assigned.</p>
+              <h2 style="color: #002147; margin-top: 0;">Great News! Your Load is Assigned ✓</h2>
+              <p>Your shipment has been assigned and a driver is ready for pickup.</p>
               
               <div style="${detailBoxStyle}">
                 <h3 style="margin-top: 0; color: #002147;">Shipment Details</h3>
@@ -260,7 +260,7 @@ function getInAppNotificationTitle(type: string): string {
     case "load_submitted":
       return "Load Request Received";
     case "load_approved":
-      return "Load Approved!";
+      return "Load Assigned!";
     case "status_in_transit":
       return "Shipment In Transit";
     case "status_delivered":
@@ -276,7 +276,7 @@ function getInAppNotificationMessage(type: string, loadData: NotificationRequest
     case "load_submitted":
       return `Your load request #${shortId} from ${loadData.origin_address} to ${loadData.destination_address} has been received and is under review.`;
     case "load_approved":
-      return `Load #${shortId} has been approved. Driver ${loadData.driver_name || "assigned"} with Truck ${loadData.truck_number || "assigned"}.`;
+      return `Load #${shortId} has been assigned. Driver ${loadData.driver_name || "assigned"} with Truck ${loadData.truck_number || "assigned"}.`;
     case "status_in_transit":
       return `Your shipment #${shortId} is now in transit from ${loadData.origin_address}.`;
     case "status_delivered":
