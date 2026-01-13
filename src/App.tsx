@@ -12,6 +12,7 @@ import MyShipmentsPage from "./pages/MyShipmentsPage";
 import LoadQueuePage from "./pages/LoadQueuePage";
 import InsightsPage from "./pages/InsightsPage";
 import DriverLoadsPage from "./pages/DriverLoadsPage";
+import DriversPage from "./pages/DriversPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/dashboard/queue" element={<LoadQueuePage />} />
             <Route path="/dashboard/insights" element={<InsightsPage />} />
             <Route path="/dashboard/my-loads" element={<DriverLoadsPage />} />
+            <Route path="/dashboard/drivers" element={<DriversPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
