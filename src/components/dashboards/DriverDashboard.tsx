@@ -110,12 +110,8 @@ export function DriverDashboard() {
             throw uploadError;
           }
           
-          // Get public URL
-          const { data: publicUrlData } = supabase.storage
-            .from('signatures')
-            .getPublicUrl(fileName);
-          
-          updateData.client_signature_url = publicUrlData.publicUrl;
+          // Store the file path (not public URL) for signed URL generation
+          updateData.client_signature_url = fileName;
           updateData.signature_timestamp = new Date().toISOString();
         } catch (uploadErr) {
           console.error("Failed to upload signature:", uploadErr);

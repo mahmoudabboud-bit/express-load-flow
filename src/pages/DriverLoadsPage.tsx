@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/StatusBadge";
 import { SignatureCapture } from "@/components/SignatureCapture";
+import { SignedImage } from "@/components/SignedImage";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -125,12 +126,8 @@ export default function DriverLoadsPage() {
             throw uploadError;
           }
           
-          // Get public URL
-          const { data: publicUrlData } = supabase.storage
-            .from('signatures')
-            .getPublicUrl(fileName);
-          
-          updateData.client_signature_url = publicUrlData.publicUrl;
+          // Store the file path (not public URL) for signed URL generation
+          updateData.client_signature_url = fileName;
           updateData.signature_timestamp = new Date().toISOString();
         } catch (uploadErr) {
           console.error("Failed to upload signature:", uploadErr);
@@ -534,7 +531,7 @@ export default function DriverLoadsPage() {
                       Receiver Signature
                     </Label>
                     <div className="bg-white rounded-lg border border-border p-2">
-                      <img
+                      <SignedImage
                         src={viewingLoad.client_signature_url}
                         alt="Delivery signature"
                         className="max-h-24 mx-auto"
