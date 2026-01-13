@@ -12,7 +12,10 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Package, ArrowLeft, Loader2, Filter, UserCheck, Truck, DollarSign, Pencil, Eye, MapPin, FileCheck, CheckCircle, User, Phone } from "lucide-react";
+import { Package, ArrowLeft, Loader2, Filter, UserCheck, Truck, DollarSign, Pencil, Eye, MapPin, FileCheck, CheckCircle, User, Phone, Clock } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
 
 interface Client {
   id: string;
@@ -42,6 +45,7 @@ interface Load {
   delivered_at: string | null;
   assigned_at: string | null;
   in_transit_at: string | null;
+  eta: string | null;
   client?: Client | null;
 }
 
@@ -73,6 +77,7 @@ export default function LoadQueuePage() {
   const [driverName, setDriverName] = useState("");
   const [truckNumber, setTruckNumber] = useState("");
   const [price, setPrice] = useState("");
+  const [eta, setEta] = useState<Date | undefined>(undefined);
   const [approving, setApproving] = useState(false);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -177,6 +182,7 @@ export default function LoadQueuePage() {
     setDriverName(editing ? load.driver_name || "" : "");
     setTruckNumber(editing ? load.truck_number || "" : "");
     setPrice(editing && load.price_cents ? (load.price_cents / 100).toFixed(2) : "");
+    setEta(editing && load.eta ? new Date(load.eta) : undefined);
     setApprovalModalOpen(true);
   };
 
@@ -219,6 +225,7 @@ export default function LoadQueuePage() {
       driver_name: driverFullName,
       truck_number: truckNumber.trim(),
       price_cents: priceInCents,
+      eta: eta ? eta.toISOString() : null,
     };
     
     // Only update status and timestamp if we're assigning, not editing
@@ -538,6 +545,31 @@ export default function LoadQueuePage() {
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Clock size={16} />
+                  ETA (Estimated Arrival)
+                </Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal"
+                    >
+                      {eta ? format(eta, "PPP") : <span className="text-muted-foreground">Select ETA date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={eta}
+                      onSelect={setEta}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <DialogFooter>
