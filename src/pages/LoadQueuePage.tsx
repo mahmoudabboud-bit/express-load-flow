@@ -27,6 +27,12 @@ interface Load {
   price_cents: number | null;
   created_at: string;
   client_id: string;
+  driver_id: string | null;
+}
+
+interface Driver {
+  id: string;
+  full_name: string | null;
 }
 
 export default function LoadQueuePage() {
@@ -41,17 +47,40 @@ export default function LoadQueuePage() {
   // Approval modal state
   const [approvalModalOpen, setApprovalModalOpen] = useState(false);
   const [selectedLoad, setSelectedLoad] = useState<Load | null>(null);
+  const [selectedDriverId, setSelectedDriverId] = useState("");
   const [driverName, setDriverName] = useState("");
   const [truckNumber, setTruckNumber] = useState("");
   const [price, setPrice] = useState("");
   const [approving, setApproving] = useState(false);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     if (user && userRole === "dispatcher") {
       fetchLoads();
+      fetchDrivers();
     }
   }, [user, userRole]);
+
+  const fetchDrivers = async () => {
+    // Get all users with driver role
+    const { data: driverRoles } = await supabase
+      .from("user_roles")
+      .select("user_id")
+      .eq("role", "driver");
+
+    if (driverRoles && driverRoles.length > 0) {
+      const driverIds = driverRoles.map(r => r.user_id);
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", driverIds);
+
+      if (profiles) {
+        setDrivers(profiles);
+      }
+    }
+  };
 
   useEffect(() => {
     const approveId = searchParams.get("approve");
@@ -80,21 +109,32 @@ export default function LoadQueuePage() {
   const openApprovalModal = (load: Load, editing = false) => {
     setSelectedLoad(load);
     setIsEditing(editing);
+    setSelectedDriverId(editing ? load.driver_id || "" : "");
     setDriverName(editing ? load.driver_name || "" : "");
     setTruckNumber(editing ? load.truck_number || "" : "");
     setPrice(editing && load.price_cents ? (load.price_cents / 100).toFixed(2) : "");
     setApprovalModalOpen(true);
   };
 
+  const handleDriverSelect = (driverId: string) => {
+    setSelectedDriverId(driverId);
+    const driver = drivers.find(d => d.id === driverId);
+    if (driver?.full_name) {
+      setDriverName(driver.full_name);
+    }
+  };
+
   const handleApprove = async () => {
-    if (!selectedLoad || !driverName.trim() || !truckNumber.trim() || !price.trim()) {
+    if (!selectedLoad || !selectedDriverId || !truckNumber.trim() || !price.trim()) {
       toast({
         variant: "destructive",
         title: "Missing information",
-        description: "Please enter driver name, truck number, and price.",
+        description: "Please select a driver, enter truck number, and price.",
       });
       return;
     }
+
+    const selectedDriver = drivers.find(d => d.id === selectedDriverId);
 
     const priceInCents = Math.round(parseFloat(price) * 100);
     if (isNaN(priceInCents) || priceInCents <= 0) {
@@ -109,7 +149,8 @@ export default function LoadQueuePage() {
     setApproving(true);
 
     const updateData: Record<string, unknown> = {
-      driver_name: driverName.trim(),
+      driver_id: selectedDriverId,
+      driver_name: selectedDriver?.full_name || driverName.trim(),
       truck_number: truckNumber.trim(),
       price_cents: priceInCents,
     };
@@ -331,16 +372,22 @@ export default function LoadQueuePage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="driverName" className="flex items-center gap-2">
+                <Label className="flex items-center gap-2">
                   <UserCheck size={16} />
-                  Driver Name
+                  Select Driver
                 </Label>
-                <Input
-                  id="driverName"
-                  placeholder="John Smith"
-                  value={driverName}
-                  onChange={(e) => setDriverName(e.target.value)}
-                />
+                <Select value={selectedDriverId} onValueChange={handleDriverSelect}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a driver" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {drivers.map((driver) => (
+                      <SelectItem key={driver.id} value={driver.id}>
+                        {driver.full_name || "Unnamed Driver"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
