@@ -21,7 +21,8 @@ import {
   Weight,
   Eye,
   MapPin,
-  FileCheck
+  FileCheck,
+  Users
 } from "lucide-react";
 
 interface Load {
@@ -84,6 +85,12 @@ export function DispatcherDashboard() {
           <p className="text-muted-foreground">Manage loads and track operations.</p>
         </div>
         <div className="flex flex-wrap gap-3">
+          <Link to="/dashboard/clients">
+            <Button variant="outline">
+              <Users className="mr-2" size={18} />
+              Manage Clients
+            </Button>
+          </Link>
           <Link to="/dashboard/drivers">
             <Button variant="outline">
               <Truck className="mr-2" size={18} />
