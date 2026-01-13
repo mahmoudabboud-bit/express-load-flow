@@ -55,6 +55,9 @@ export default function MyShipmentsPage() {
     trailer_type: "",
     weight_lbs: "",
     pickup_date: "",
+    pickup_time: "",
+    delivery_date: "",
+    delivery_time: "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -66,6 +69,9 @@ export default function MyShipmentsPage() {
       trailer_type: load.trailer_type,
       weight_lbs: load.weight_lbs.toString(),
       pickup_date: load.pickup_date,
+      pickup_time: load.pickup_time || "",
+      delivery_date: load.delivery_date || "",
+      delivery_time: load.delivery_time || "",
     });
   };
 
@@ -81,6 +87,9 @@ export default function MyShipmentsPage() {
         trailer_type: editForm.trailer_type,
         weight_lbs: parseInt(editForm.weight_lbs),
         pickup_date: editForm.pickup_date,
+        pickup_time: editForm.pickup_time || null,
+        delivery_date: editForm.delivery_date || null,
+        delivery_time: editForm.delivery_time || null,
       })
       .eq("id", editingLoad.id);
 
@@ -405,14 +414,42 @@ export default function MyShipmentsPage() {
               <div className="space-y-2">
                 <Label htmlFor="edit-date" className="flex items-center gap-2">
                   <Calendar size={16} className="text-muted-foreground" />
-                  Pickup Date
+                  Pickup Date & Time
                 </Label>
-                <Input
-                  id="edit-date"
-                  type="date"
-                  value={editForm.pickup_date}
-                  onChange={(e) => setEditForm({ ...editForm, pickup_date: e.target.value })}
-                />
+                <div className="grid grid-cols-2 gap-2">
+                  <Input
+                    id="edit-date"
+                    type="date"
+                    value={editForm.pickup_date}
+                    onChange={(e) => setEditForm({ ...editForm, pickup_date: e.target.value })}
+                  />
+                  <Input
+                    id="edit-pickup-time"
+                    type="time"
+                    value={editForm.pickup_time}
+                    onChange={(e) => setEditForm({ ...editForm, pickup_time: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-delivery-date" className="flex items-center gap-2">
+                  <Clock size={16} className="text-accent" />
+                  Delivery Date & Time
+                </Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <Input
+                    id="edit-delivery-date"
+                    type="date"
+                    value={editForm.delivery_date}
+                    onChange={(e) => setEditForm({ ...editForm, delivery_date: e.target.value })}
+                  />
+                  <Input
+                    id="edit-delivery-time"
+                    type="time"
+                    value={editForm.delivery_time}
+                    onChange={(e) => setEditForm({ ...editForm, delivery_time: e.target.value })}
+                  />
+                </div>
               </div>
               <div className="flex justify-end gap-3 pt-4">
                 <Button variant="outline" onClick={() => setEditingLoad(null)}>
