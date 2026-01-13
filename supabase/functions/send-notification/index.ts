@@ -6,6 +6,9 @@ const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const dispatcherEmail = Deno.env.get("DISPATCHER_EMAIL");
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const VAPID_PUBLIC_KEY = Deno.env.get("VAPID_PUBLIC_KEY");
+const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY");
+const VAPID_SUBJECT = "mailto:roadrunner.xprss@gmail.com";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -339,6 +342,81 @@ function getInAppNotificationMessage(type: string, loadData: NotificationRequest
   }
 }
 
+// Send push notifications to all user's devices
+async function sendPushNotifications(
+  supabase: any,
+  userId: string,
+  payload: { title: string; body: string; load_id?: string }
+): Promise<{ sent: number; failed: number }> {
+  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+    console.log("VAPID keys not configured, skipping push notifications");
+    return { sent: 0, failed: 0 };
+  }
+
+  try {
+    // Get all push subscriptions for this user
+    const { data: subscriptions, error } = await supabase
+      .from("push_subscriptions")
+      .select("*")
+      .eq("user_id", userId);
+
+    if (error || !subscriptions || subscriptions.length === 0) {
+      console.log("No push subscriptions found for user:", userId);
+      return { sent: 0, failed: 0 };
+    }
+
+    console.log(`Found ${subscriptions.length} push subscriptions for user ${userId}`);
+
+    let sent = 0;
+    let failed = 0;
+    const expiredEndpoints: string[] = [];
+
+    for (const sub of subscriptions as Array<{ endpoint: string; p256dh: string; auth: string }>) {
+      try {
+        // Simple push without payload (triggers the service worker)
+        const response = await fetch(sub.endpoint, {
+          method: "POST",
+          headers: {
+            "TTL": "86400",
+            "Urgency": "high",
+            "Content-Length": "0",
+          },
+        });
+
+        if (response.status === 201 || response.status === 200) {
+          sent++;
+          console.log("Push notification sent successfully");
+        } else if (response.status === 404 || response.status === 410) {
+          expiredEndpoints.push(sub.endpoint);
+          failed++;
+          console.log("Subscription expired, will remove");
+        } else {
+          failed++;
+          console.log(`Push failed with status ${response.status}`);
+        }
+      } catch (err) {
+        failed++;
+        console.error("Error sending push to subscription:", err);
+      }
+    }
+
+    // Clean up expired subscriptions
+    if (expiredEndpoints.length > 0) {
+      await supabase
+        .from("push_subscriptions")
+        .delete()
+        .eq("user_id", userId)
+        .in("endpoint", expiredEndpoints);
+      console.log(`Removed ${expiredEndpoints.length} expired subscriptions`);
+    }
+
+    return { sent, failed };
+  } catch (err) {
+    console.error("Error in sendPushNotifications:", err);
+    return { sent: 0, failed: 0 };
+  }
+}
+
 const handler = async (req: Request): Promise<Response> => {
   console.log("send-notification function called");
   
@@ -403,7 +481,6 @@ const handler = async (req: Request): Promise<Response> => {
     const { type, recipientEmail, recipientUserId, loadData, notifyDispatcher } = validationResult.data;
 
     // Verify user has permission to send notifications for this load
-    // User must be: the load owner (client), a dispatcher, or a driver
     const { data: load, error: loadError } = await supabase
       .from("loads")
       .select("client_id")
@@ -440,7 +517,6 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     console.log(`User ${user.id} authorized: owner=${isLoadOwner}, dispatcher=${isDispatcher}, driver=${isDriver}`);
-    
     console.log(`Processing ${type} notification for load ${loadData.id}`);
     console.log(`Recipient: ${recipientEmail}, User ID: ${recipientUserId}`);
 
@@ -470,7 +546,7 @@ const handler = async (req: Request): Promise<Response> => {
     
     console.log("Recipient email sent successfully:", recipientData);
 
-    // Create in-app notification for the recipient if we have user ID
+    // Create in-app notification content
     const notificationTitle = getInAppNotificationTitle(type);
     const notificationMessage = getInAppNotificationMessage(type, loadData);
     
@@ -483,6 +559,8 @@ const handler = async (req: Request): Promise<Response> => {
       read: boolean;
     }> = [];
 
+    const pushRecipients: string[] = [];
+
     if (recipientUserId) {
       notificationsToInsert.push({
         user_id: recipientUserId,
@@ -492,9 +570,10 @@ const handler = async (req: Request): Promise<Response> => {
         load_id: loadData.id,
         read: false,
       });
+      pushRecipients.push(recipientUserId);
     }
 
-    // Fetch all dispatcher user IDs and notify them about all load updates
+    // Fetch all dispatcher user IDs and notify them
     const { data: dispatchers, error: dispatcherError } = await supabase
       .from("user_roles")
       .select("user_id")
@@ -512,7 +591,6 @@ const handler = async (req: Request): Promise<Response> => {
         : `Load #${loadData.id.slice(0, 8)}: ${notificationTitle}`;
 
       for (const dispatcher of dispatchers) {
-        // Avoid duplicate if dispatcher is also the recipient
         if (dispatcher.user_id !== recipientUserId) {
           notificationsToInsert.push({
             user_id: dispatcher.user_id,
@@ -522,12 +600,13 @@ const handler = async (req: Request): Promise<Response> => {
             load_id: loadData.id,
             read: false,
           });
+          pushRecipients.push(dispatcher.user_id);
         }
       }
       console.log(`Adding notifications for ${dispatchers.length} dispatchers`);
     }
 
-    // Insert all notifications at once
+    // Insert all in-app notifications
     if (notificationsToInsert.length > 0) {
       const { error: notifError } = await supabase.from("notifications").insert(notificationsToInsert);
       
@@ -538,7 +617,24 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // If this is a load submission, also notify dispatcher
+    // Send push notifications to all recipients
+    let totalPushSent = 0;
+    let totalPushFailed = 0;
+    
+    for (const userId of pushRecipients) {
+      const pushPayload = {
+        title: notificationTitle,
+        body: notificationMessage,
+        load_id: loadData.id,
+      };
+      const { sent, failed } = await sendPushNotifications(supabase, userId, pushPayload);
+      totalPushSent += sent;
+      totalPushFailed += failed;
+    }
+
+    console.log(`Push notifications: ${totalPushSent} sent, ${totalPushFailed} failed`);
+
+    // If this is a load submission, also notify dispatcher via email
     if (notifyDispatcher && dispatcherEmail) {
       const dispatcherContent = getDispatcherEmailContent(loadData, recipientEmail);
       
@@ -560,20 +656,24 @@ const handler = async (req: Request): Promise<Response> => {
 
       if (!dispatcherResponse.ok) {
         console.error("Error sending dispatcher email:", dispatcherData);
-        // Don't throw - dispatcher notification is secondary
       } else {
         console.log("Dispatcher email sent successfully:", dispatcherData);
       }
     }
 
     return new Response(
-      JSON.stringify({ success: true, message: "Notification sent" }),
+      JSON.stringify({ 
+        success: true, 
+        message: "Notification sent",
+        push: { sent: totalPushSent, failed: totalPushFailed }
+      }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     console.error("Error in send-notification function:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
