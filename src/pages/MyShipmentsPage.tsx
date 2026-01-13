@@ -269,7 +269,7 @@ export default function MyShipmentsPage() {
                         {load.eta && load.status !== "Delivered" && (
                           <div className="flex items-center gap-1 text-accent font-medium">
                             <Clock size={14} />
-                            ETA: {format(new Date(load.eta), "MMM d, yyyy")}
+                            ETA: {format(new Date(load.eta), "MMM d 'at' h:mm a")}
                           </div>
                         )}
                         {load.driver_name && (
@@ -510,7 +510,7 @@ export default function MyShipmentsPage() {
                       Estimated Arrival
                     </Label>
                     <p className="text-lg font-bold text-accent">
-                      {format(new Date(viewingLoad.eta), "PPPP")}
+                      {format(new Date(viewingLoad.eta), "PPPP 'at' p")}
                     </p>
                   </div>
                 )}

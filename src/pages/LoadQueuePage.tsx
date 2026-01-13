@@ -78,6 +78,7 @@ export default function LoadQueuePage() {
   const [truckNumber, setTruckNumber] = useState("");
   const [price, setPrice] = useState("");
   const [eta, setEta] = useState<Date | undefined>(undefined);
+  const [etaTime, setEtaTime] = useState("12:00");
   const [approving, setApproving] = useState(false);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -182,7 +183,14 @@ export default function LoadQueuePage() {
     setDriverName(editing ? load.driver_name || "" : "");
     setTruckNumber(editing ? load.truck_number || "" : "");
     setPrice(editing && load.price_cents ? (load.price_cents / 100).toFixed(2) : "");
-    setEta(editing && load.eta ? new Date(load.eta) : undefined);
+    if (editing && load.eta) {
+      const etaDate = new Date(load.eta);
+      setEta(etaDate);
+      setEtaTime(format(etaDate, "HH:mm"));
+    } else {
+      setEta(undefined);
+      setEtaTime("12:00");
+    }
     setApprovalModalOpen(true);
   };
 
@@ -220,12 +228,21 @@ export default function LoadQueuePage() {
 
     setApproving(true);
 
+    // Combine date and time for ETA
+    let combinedEta: string | null = null;
+    if (eta) {
+      const [hours, minutes] = etaTime.split(":").map(Number);
+      const etaWithTime = new Date(eta);
+      etaWithTime.setHours(hours, minutes, 0, 0);
+      combinedEta = etaWithTime.toISOString();
+    }
+
     const updateData: Record<string, unknown> = {
       driver_id: selectedDriver?.user_id || null,
       driver_name: driverFullName,
       truck_number: truckNumber.trim(),
       price_cents: priceInCents,
-      eta: eta ? eta.toISOString() : null,
+      eta: combinedEta,
     };
     
     // Only update status and timestamp if we're assigning, not editing
@@ -552,24 +569,32 @@ export default function LoadQueuePage() {
                   <Clock size={16} />
                   ETA (Estimated Arrival)
                 </Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal"
-                    >
-                      {eta ? format(eta, "PPP") : <span className="text-muted-foreground">Select ETA date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={eta}
-                      onSelect={setEta}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <div className="flex gap-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="flex-1 justify-start text-left font-normal"
+                      >
+                        {eta ? format(eta, "PPP") : <span className="text-muted-foreground">Select date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={eta}
+                        onSelect={setEta}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <Input
+                    type="time"
+                    value={etaTime}
+                    onChange={(e) => setEtaTime(e.target.value)}
+                    className="w-[120px]"
+                  />
+                </div>
               </div>
 
               <DialogFooter>
@@ -664,7 +689,7 @@ export default function LoadQueuePage() {
                   <div className="flex items-center gap-2">
                     <Clock size={16} className="text-accent" />
                     <span className="text-sm text-muted-foreground">Estimated Arrival:</span>
-                    <span className="font-medium">{format(new Date(viewingLoad.eta), "PPP")}</span>
+                    <span className="font-medium">{format(new Date(viewingLoad.eta), "PPP 'at' p")}</span>
                   </div>
                 </div>
               )}
