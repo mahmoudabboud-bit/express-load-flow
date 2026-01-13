@@ -100,6 +100,8 @@ export type Database = {
           client_signature_url: string | null
           created_at: string
           delivered_at: string | null
+          delivery_date: string | null
+          delivery_time: string | null
           destination_address: string
           driver_id: string | null
           driver_name: string | null
@@ -108,6 +110,7 @@ export type Database = {
           in_transit_at: string | null
           origin_address: string
           pickup_date: string
+          pickup_time: string | null
           price_cents: number | null
           signature_timestamp: string | null
           status: string
@@ -122,6 +125,8 @@ export type Database = {
           client_signature_url?: string | null
           created_at?: string
           delivered_at?: string | null
+          delivery_date?: string | null
+          delivery_time?: string | null
           destination_address: string
           driver_id?: string | null
           driver_name?: string | null
@@ -130,6 +135,7 @@ export type Database = {
           in_transit_at?: string | null
           origin_address: string
           pickup_date: string
+          pickup_time?: string | null
           price_cents?: number | null
           signature_timestamp?: string | null
           status?: string
@@ -144,6 +150,8 @@ export type Database = {
           client_signature_url?: string | null
           created_at?: string
           delivered_at?: string | null
+          delivery_date?: string | null
+          delivery_time?: string | null
           destination_address?: string
           driver_id?: string | null
           driver_name?: string | null
@@ -152,6 +160,7 @@ export type Database = {
           in_transit_at?: string | null
           origin_address?: string
           pickup_date?: string
+          pickup_time?: string | null
           price_cents?: number | null
           signature_timestamp?: string | null
           status?: string

@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Truck, Weight, Calendar, Loader2, ArrowLeft } from "lucide-react";
+import { MapPin, Truck, Weight, Calendar, Loader2, ArrowLeft, Clock } from "lucide-react";
 import { Navigate, Link } from "react-router-dom";
 
 const trailerTypes = ["Dry Van", "Reefer", "Flatbed", "Stepdeck"] as const;
@@ -27,6 +27,9 @@ export default function RequestLoadPage() {
     trailer_type: "" as typeof trailerTypes[number] | "",
     weight_lbs: "",
     pickup_date: "",
+    pickup_time: "",
+    delivery_date: "",
+    delivery_time: "",
   });
 
   if (authLoading) {
@@ -66,6 +69,9 @@ export default function RequestLoadPage() {
       trailer_type: formData.trailer_type,
       weight_lbs: parseInt(formData.weight_lbs),
       pickup_date: formData.pickup_date,
+      pickup_time: formData.pickup_time || null,
+      delivery_date: formData.delivery_date || null,
+      delivery_time: formData.delivery_time || null,
       status: "Pending",
     }).select().single();
 
@@ -187,19 +193,54 @@ export default function RequestLoadPage() {
                 />
               </div>
 
-              {/* Pickup Date */}
+              {/* Pickup Date & Time */}
               <div className="space-y-2">
-                <Label htmlFor="date" className="flex items-center gap-2">
+                <Label className="flex items-center gap-2">
                   <Calendar size={16} className="text-muted-foreground" />
-                  Pickup Date
+                  Pickup Date & Time
                 </Label>
-                <Input
-                  id="date"
-                  type="date"
-                  min={new Date().toISOString().split("T")[0]}
-                  value={formData.pickup_date}
-                  onChange={(e) => setFormData({ ...formData, pickup_date: e.target.value })}
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="pickup_date"
+                    type="date"
+                    min={new Date().toISOString().split("T")[0]}
+                    value={formData.pickup_date}
+                    onChange={(e) => setFormData({ ...formData, pickup_date: e.target.value })}
+                    className="flex-1"
+                  />
+                  <Input
+                    id="pickup_time"
+                    type="time"
+                    value={formData.pickup_time}
+                    onChange={(e) => setFormData({ ...formData, pickup_time: e.target.value })}
+                    className="w-[140px]"
+                  />
+                </div>
+              </div>
+
+              {/* Delivery Date & Time */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Clock size={16} className="text-accent" />
+                  Delivery Date & Time
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="delivery_date"
+                    type="date"
+                    min={formData.pickup_date || new Date().toISOString().split("T")[0]}
+                    value={formData.delivery_date}
+                    onChange={(e) => setFormData({ ...formData, delivery_date: e.target.value })}
+                    className="flex-1"
+                  />
+                  <Input
+                    id="delivery_time"
+                    type="time"
+                    value={formData.delivery_time}
+                    onChange={(e) => setFormData({ ...formData, delivery_time: e.target.value })}
+                    className="w-[140px]"
+                  />
+                </div>
               </div>
 
               <div className="pt-4">
