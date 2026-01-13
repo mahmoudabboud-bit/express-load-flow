@@ -292,18 +292,7 @@ export default function MyShipmentsPage() {
                             View Details
                           </Button>
                         )}
-                        {load.status === "Delivered" && !load.client_signature_url && (
-                          <Button
-                            variant="accent"
-                            size="sm"
-                            onClick={() => setSigningLoad(load)}
-                            className="mt-2"
-                          >
-                            <PenTool size={14} className="mr-1" />
-                            Sign to Confirm
-                          </Button>
-                        )}
-                        {load.status === "Delivered" && load.client_signature_url && (
+                        {load.status === "Delivered" && (
                           <Button
                             variant="outline"
                             size="sm"
