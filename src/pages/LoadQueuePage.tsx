@@ -536,13 +536,13 @@ export default function LoadQueuePage() {
                   <div>
                     <span className="text-muted-foreground">Pickup:</span>{" "}
                     {new Date(selectedLoad.pickup_date).toLocaleDateString()}
-                    {selectedLoad.pickup_time && ` at ${selectedLoad.pickup_time.slice(0, 5)}`}
+                    {selectedLoad.pickup_time && ` at ${format(new Date(`2000-01-01T${selectedLoad.pickup_time}`), "h:mm a")}`}
                   </div>
                   {selectedLoad.delivery_date && (
                     <div>
                       <span className="text-muted-foreground">Delivery:</span>{" "}
                       {new Date(selectedLoad.delivery_date).toLocaleDateString()}
-                      {selectedLoad.delivery_time && ` at ${selectedLoad.delivery_time.slice(0, 5)}`}
+                      {selectedLoad.delivery_time && ` at ${format(new Date(`2000-01-01T${selectedLoad.delivery_time}`), "h:mm a")}`}
                     </div>
                   )}
                 </div>
