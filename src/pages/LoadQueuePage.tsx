@@ -290,6 +290,39 @@ export default function LoadQueuePage() {
           );
         }
       }
+
+      // Send ETA notification if ETA was set/updated (for edits with ETA change or new assignments with ETA)
+      if (combinedEta) {
+        const etaChanged = isEditing && selectedLoad.eta !== combinedEta;
+        const newEtaSet = !isEditing && combinedEta;
+        
+        if (etaChanged || newEtaSet) {
+          // Get client email from profiles table
+          const { data: clientProfile } = await supabase
+            .from("profiles")
+            .select("email")
+            .eq("id", selectedLoad.client_id)
+            .single();
+
+          if (clientProfile?.email) {
+            await sendNotification(
+              "eta_updated",
+              clientProfile.email,
+              {
+                id: selectedLoad.id,
+                origin_address: selectedLoad.origin_address,
+                destination_address: selectedLoad.destination_address,
+                pickup_date: selectedLoad.pickup_date,
+                driver_name: driverFullName,
+                truck_number: truckNumber.trim(),
+                eta: combinedEta,
+              },
+              false,
+              selectedLoad.client_id
+            );
+          }
+        }
+      }
       
       toast({
         title: isEditing ? "Load Updated!" : "Load Assigned!",

@@ -22,10 +22,11 @@ const loadDataSchema = z.object({
   weight_lbs: z.number().int().positive().max(1000000, "Weight exceeds maximum").optional().nullable(),
   driver_name: z.string().max(200, "Driver name too long").optional().nullable(),
   truck_number: z.string().max(50, "Truck number too long").optional().nullable(),
+  eta: z.string().max(100, "ETA too long").optional().nullable(),
 });
 
 const notificationRequestSchema = z.object({
-  type: z.enum(['load_submitted', 'load_approved', 'status_in_transit', 'status_delivered'], {
+  type: z.enum(['load_submitted', 'load_approved', 'status_in_transit', 'status_delivered', 'eta_updated'], {
     errorMap: () => ({ message: "Invalid notification type" })
   }),
   recipientEmail: z.string().email("Invalid email format").max(255, "Email too long"),
@@ -213,6 +214,54 @@ function getEmailContent(type: string, loadData: NotificationRequest["loadData"]
         `,
       };
 
+    case "eta_updated":
+      const formatEta = (eta: string) => {
+        return new Date(eta).toLocaleString('en-US', { 
+          weekday: 'long', 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+      };
+      return {
+        subject: `ETA Update for Load #${loadData.id.slice(0, 8)}`,
+        html: `
+          <div style="${baseStyle}">
+            <div style="${headerStyle}">
+              <h1 style="margin: 0; font-size: 28px;">🚚 Road Runner Express</h1>
+            </div>
+            <div style="${contentStyle}">
+              <h2 style="color: #002147; margin-top: 0;">ETA Update for Your Shipment 📅</h2>
+              <p>The estimated arrival time for your shipment has been ${loadData.eta ? 'updated' : 'set'}.</p>
+              
+              ${loadData.eta ? `
+              <div style="background: ${accentColor}; color: white; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
+                <p style="margin: 0; font-size: 14px; opacity: 0.9;">Estimated Arrival</p>
+                <p style="margin: 8px 0 0 0; font-size: 24px; font-weight: bold;">${formatEta(loadData.eta)}</p>
+              </div>
+              ` : ''}
+              
+              <div style="${detailBoxStyle}">
+                <h3 style="margin-top: 0; color: #002147;">Shipment Details</h3>
+                <p><strong>Reference ID:</strong> #${loadData.id.slice(0, 8)}</p>
+                <p><strong>From:</strong> ${loadData.origin_address}</p>
+                <p><strong>To:</strong> ${loadData.destination_address}</p>
+                ${loadData.driver_name ? `<p><strong>Driver:</strong> ${loadData.driver_name}</p>` : ''}
+                ${loadData.truck_number ? `<p><strong>Truck:</strong> ${loadData.truck_number}</p>` : ''}
+              </div>
+              
+              <p>Track your shipment anytime by logging into your account.</p>
+            </div>
+            <div style="${footerStyle}">
+              <p style="margin: 0;">Road Runner Express - Fast, Reliable, On Time</p>
+            </div>
+          </div>
+        `,
+      };
+
     default:
       return { subject: "Road Runner Express Notification", html: "<p>Notification</p>" };
   }
@@ -265,6 +314,8 @@ function getInAppNotificationTitle(type: string): string {
       return "Shipment In Transit";
     case "status_delivered":
       return "Shipment Delivered";
+    case "eta_updated":
+      return "ETA Updated";
     default:
       return "Notification";
   }
@@ -281,6 +332,8 @@ function getInAppNotificationMessage(type: string, loadData: NotificationRequest
       return `Your shipment #${shortId} is now in transit from ${loadData.origin_address}.`;
     case "status_delivered":
       return `Your shipment #${shortId} has been delivered to ${loadData.destination_address}.`;
+    case "eta_updated":
+      return `ETA for shipment #${shortId} has been updated${loadData.eta ? `: ${new Date(loadData.eta).toLocaleString()}` : ''}.`;
     default:
       return "You have a new notification.";
   }
