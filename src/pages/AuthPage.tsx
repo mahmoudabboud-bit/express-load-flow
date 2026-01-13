@@ -22,9 +22,13 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [address, setAddress] = useState("");
   const [role, setRole] = useState<UserRole>("client");
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string; fullName?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string; password?: string; fullName?: string; firstName?: string; lastName?: string; phoneNumber?: string; address?: string }>({});
 
   const { signIn, signUp, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -49,8 +53,17 @@ export default function AuthPage() {
       newErrors.password = passwordResult.error.errors[0].message;
     }
 
-    if (mode === "signup" && !fullName.trim()) {
-      newErrors.fullName = "Please enter your full name";
+    if (mode === "signup") {
+      // Client role requires all fields
+      if (role === "client") {
+        if (!firstName.trim()) newErrors.firstName = "Please enter your first name";
+        if (!lastName.trim()) newErrors.lastName = "Please enter your last name";
+        if (!phoneNumber.trim()) newErrors.phoneNumber = "Please enter your phone number";
+        if (!address.trim()) newErrors.address = "Please enter your address";
+      } else {
+        // Other roles just need full name
+        if (!fullName.trim()) newErrors.fullName = "Please enter your full name";
+      }
     }
 
     setErrors(newErrors);
@@ -83,7 +96,16 @@ export default function AuthPage() {
           navigate("/dashboard");
         }
       } else {
-        const { error } = await signUp(email, password, role, fullName);
+        // For clients, pass client-specific data; for others, use fullName
+        const clientData = role === "client" ? {
+          firstName,
+          lastName,
+          phoneNumber,
+          address,
+        } : undefined;
+        
+        const displayName = role === "client" ? `${firstName} ${lastName}` : fullName;
+        const { error } = await signUp(email, password, role, displayName, clientData);
         if (error) {
           const errorMessage = error.message.includes("already registered")
             ? "This email is already registered. Please sign in instead."
@@ -185,7 +207,70 @@ export default function AuthPage() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
-                {mode === "signup" && (
+                {mode === "signup" && role === "client" && (
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="firstName">First Name</Label>
+                        <Input
+                          id="firstName"
+                          type="text"
+                          placeholder="John"
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                          className={errors.firstName ? "border-destructive" : ""}
+                        />
+                        {errors.firstName && (
+                          <p className="text-sm text-destructive">{errors.firstName}</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="lastName">Last Name</Label>
+                        <Input
+                          id="lastName"
+                          type="text"
+                          placeholder="Doe"
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                          className={errors.lastName ? "border-destructive" : ""}
+                        />
+                        {errors.lastName && (
+                          <p className="text-sm text-destructive">{errors.lastName}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phoneNumber">Phone Number</Label>
+                      <Input
+                        id="phoneNumber"
+                        type="tel"
+                        placeholder="(555) 123-4567"
+                        value={phoneNumber}
+                        onChange={(e) => setPhoneNumber(e.target.value)}
+                        className={errors.phoneNumber ? "border-destructive" : ""}
+                      />
+                      {errors.phoneNumber && (
+                        <p className="text-sm text-destructive">{errors.phoneNumber}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="address">Address</Label>
+                      <Input
+                        id="address"
+                        type="text"
+                        placeholder="123 Main St, City, State ZIP"
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        className={errors.address ? "border-destructive" : ""}
+                      />
+                      {errors.address && (
+                        <p className="text-sm text-destructive">{errors.address}</p>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {mode === "signup" && role !== "client" && (
                   <div className="space-y-2">
                     <Label htmlFor="fullName">Full Name</Label>
                     <Input
@@ -235,7 +320,11 @@ export default function AuthPage() {
                 {mode === "signup" && (
                   <div className="space-y-2">
                     <Label htmlFor="role">I am a...</Label>
-                    <Select value={role} onValueChange={(v) => setRole(v as UserRole)}>
+                    <Select value={role} onValueChange={(v) => {
+                      setRole(v as UserRole);
+                      // Reset form fields when role changes
+                      setErrors({});
+                    }}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>

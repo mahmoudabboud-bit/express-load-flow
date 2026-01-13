@@ -10,7 +10,7 @@ interface AuthContextType {
   userRole: UserRole | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, role: UserRole, fullName: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, role: UserRole, fullName: string, clientData?: { firstName: string; lastName: string; phoneNumber: string; address: string }) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -78,18 +78,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error };
   };
 
-  const signUp = async (email: string, password: string, role: UserRole, fullName: string) => {
+  const signUp = async (email: string, password: string, role: UserRole, fullName: string, clientData?: { firstName: string; lastName: string; phoneNumber: string; address: string }) => {
     const redirectUrl = `${window.location.origin}/`;
+    
+    // Build user metadata - include client-specific fields for the trigger
+    const metadata: Record<string, string> = {
+      full_name: fullName,
+      role: role,
+    };
+    
+    if (role === 'client' && clientData) {
+      metadata.first_name = clientData.firstName;
+      metadata.last_name = clientData.lastName;
+      metadata.phone_number = clientData.phoneNumber;
+      metadata.address = clientData.address;
+    }
     
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: redirectUrl,
-        data: {
-          full_name: fullName,
-          role: role,
-        },
+        data: metadata,
       },
     });
 
