@@ -13,7 +13,8 @@ import { Label } from "@/components/ui/label";
 import { SignatureCapture } from "@/components/SignatureCapture";
 import { ShipmentTimeline } from "@/components/ShipmentTimeline";
 import { useToast } from "@/hooks/use-toast";
-import { Package, Plus, ArrowLeft, Loader2, Filter, Pencil, MapPin, Truck, Weight, Calendar, PenTool, FileCheck, Eye, DollarSign, User } from "lucide-react";
+import { Package, Plus, ArrowLeft, Loader2, Filter, Pencil, MapPin, Truck, Weight, Calendar, PenTool, FileCheck, Eye, DollarSign, User, Clock } from "lucide-react";
+import { format } from "date-fns";
 
 interface Load {
   id: string;
@@ -31,6 +32,7 @@ interface Load {
   assigned_at: string | null;
   in_transit_at: string | null;
   delivered_at: string | null;
+  eta: string | null;
 }
 
 const trailerTypes = ["Dry Van", "Reefer", "Flatbed", "Stepdeck"] as const;
@@ -264,6 +266,12 @@ export default function MyShipmentsPage() {
                         <div className="text-muted-foreground">
                           Pickup: {new Date(load.pickup_date).toLocaleDateString()}
                         </div>
+                        {load.eta && load.status !== "Delivered" && (
+                          <div className="flex items-center gap-1 text-accent font-medium">
+                            <Clock size={14} />
+                            ETA: {format(new Date(load.eta), "MMM d, yyyy")}
+                          </div>
+                        )}
                         {load.driver_name && (
                           <div className="text-foreground font-medium">
                             Driver: {load.driver_name}
@@ -492,6 +500,18 @@ export default function MyShipmentsPage() {
                     {viewingLoad.truck_number && (
                       <p className="text-sm text-muted-foreground">Truck: {viewingLoad.truck_number}</p>
                     )}
+                  </div>
+                )}
+
+                {viewingLoad.eta && (
+                  <div className="p-4 bg-accent/10 rounded-lg border border-accent/20">
+                    <Label className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
+                      <Clock size={12} />
+                      Estimated Arrival
+                    </Label>
+                    <p className="text-lg font-bold text-accent">
+                      {format(new Date(viewingLoad.eta), "PPPP")}
+                    </p>
                   </div>
                 )}
 
