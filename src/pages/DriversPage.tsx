@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Loader2, Plus, Pencil, Trash2, Users, Truck, Mail } from "lucide-react";
+import { ArrowLeft, Loader2, Plus, Pencil, Trash2, Users, Truck, Mail, Send } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface Driver {
@@ -48,6 +48,9 @@ export default function DriversPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [driverToDelete, setDriverToDelete] = useState<Driver | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Invite state
+  const [sendingInvite, setSendingInvite] = useState<string | null>(null);
 
   useEffect(() => {
     if (user && userRole === "dispatcher") {
@@ -211,6 +214,41 @@ export default function DriversPage() {
     setDeleting(false);
   };
 
+  const handleSendInvite = async (driver: Driver) => {
+    setSendingInvite(driver.id);
+
+    try {
+      const signupUrl = `${window.location.origin}/auth`;
+      
+      const { data, error } = await supabase.functions.invoke("send-driver-invite", {
+        body: {
+          driverEmail: driver.email,
+          driverFirstName: driver.first_name,
+          driverLastName: driver.last_name,
+          signupUrl,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Invite Sent!",
+        description: `An invitation email has been sent to ${driver.email}.`,
+      });
+    } catch (err: any) {
+      console.error("Error sending invite:", err);
+      toast({
+        variant: "destructive",
+        title: "Failed to send invite",
+        description: err.message || "Please try again.",
+      });
+    }
+
+    setSendingInvite(null);
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -298,6 +336,21 @@ export default function DriversPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleSendInvite(driver)}
+                          disabled={sendingInvite === driver.id}
+                        >
+                          {sendingInvite === driver.id ? (
+                            <Loader2 size={16} className="animate-spin" />
+                          ) : (
+                            <>
+                              <Send size={16} className="mr-1" />
+                              Invite
+                            </>
+                          )}
+                        </Button>
                         <Button variant="outline" size="sm" onClick={() => openEditModal(driver)}>
                           <Pencil size={16} className="mr-1" />
                           Edit
