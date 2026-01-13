@@ -299,6 +299,16 @@ export default function DriverLoadsPage() {
                             <div className="flex-1">
                               <p className="text-xs text-muted-foreground uppercase font-medium">Delivery</p>
                               <p className="font-medium text-sm">{load.destination_address}</p>
+                              {load.delivery_date && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {new Date(load.delivery_date).toLocaleDateString("en-US", {
+                                    weekday: "short",
+                                    month: "short",
+                                    day: "numeric",
+                                  })}
+                                  {load.delivery_time && ` at ${load.delivery_time.slice(0, 5)}`}
+                                </p>
+                              )}
                             </div>
                           </div>
                           <Button

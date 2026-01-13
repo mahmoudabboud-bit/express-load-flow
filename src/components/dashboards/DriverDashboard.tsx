@@ -251,6 +251,16 @@ export function DriverDashboard() {
                 <div className="flex-1">
                   <p className="text-xs text-muted-foreground uppercase font-medium">Delivery</p>
                   <p className="font-semibold text-foreground">{currentLoad.destination_address}</p>
+                  {currentLoad.delivery_date && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {new Date(currentLoad.delivery_date).toLocaleDateString("en-US", {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                      {currentLoad.delivery_time && ` at ${currentLoad.delivery_time.slice(0, 5)}`}
+                    </p>
+                  )}
                 </div>
               </div>
               <Button
