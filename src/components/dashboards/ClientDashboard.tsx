@@ -13,7 +13,7 @@ import { SignatureCapture } from "@/components/SignatureCapture";
 import { ShipmentTimeline } from "@/components/ShipmentTimeline";
 import { generateDeliveryReceipt } from "@/lib/pdf-generator";
 import { useToast } from "@/hooks/use-toast";
-import { Package, Truck, Clock, CheckCircle, Plus, ArrowRight, Pencil, MapPin, Weight, Calendar, Loader2, FileCheck, PenTool, Eye, DollarSign, User, Download } from "lucide-react";
+import { Package, Truck, Clock, CheckCircle, Plus, ArrowRight, Pencil, MapPin, Weight, Calendar, Loader2, FileCheck, PenTool, Eye, DollarSign, User, Download, Settings } from "lucide-react";
 
 interface Load {
   id: string;
@@ -160,12 +160,20 @@ export function ClientDashboard() {
           <h1 className="text-2xl font-bold text-foreground">Welcome Back!</h1>
           <p className="text-muted-foreground">Track your shipments and request new loads.</p>
         </div>
-        <Link to="/dashboard/request">
-          <Button variant="accent" size="lg">
-            <Plus className="mr-2" size={18} />
-            Request New Load
-          </Button>
-        </Link>
+        <div className="flex gap-3">
+          <Link to="/dashboard/profile">
+            <Button variant="outline" size="lg">
+              <Settings className="mr-2" size={18} />
+              My Profile
+            </Button>
+          </Link>
+          <Link to="/dashboard/request">
+            <Button variant="accent" size="lg">
+              <Plus className="mr-2" size={18} />
+              Request New Load
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Stats Cards */}
