@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SignatureCapture } from "@/components/SignatureCapture";
 import { useToast } from "@/hooks/use-toast";
-import { Package, Plus, ArrowLeft, Loader2, Filter, Pencil, MapPin, Truck, Weight, Calendar, PenTool, FileCheck } from "lucide-react";
+import { Package, Plus, ArrowLeft, Loader2, Filter, Pencil, MapPin, Truck, Weight, Calendar, PenTool, FileCheck, Eye, DollarSign, User } from "lucide-react";
 
 interface Load {
   id: string;
@@ -38,6 +38,7 @@ export default function MyShipmentsPage() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [editingLoad, setEditingLoad] = useState<Load | null>(null);
+  const [viewingLoad, setViewingLoad] = useState<Load | null>(null);
   const [signingLoad, setSigningLoad] = useState<Load | null>(null);
   const [editForm, setEditForm] = useState({
     origin_address: "",
@@ -276,6 +277,17 @@ export default function MyShipmentsPage() {
                             Edit
                           </Button>
                         )}
+                        {(load.status === "Assigned" || load.status === "In-Transit") && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setViewingLoad(load)}
+                            className="mt-2"
+                          >
+                            <Eye size={14} className="mr-1" />
+                            View Details
+                          </Button>
+                        )}
                         {load.status === "Delivered" && !load.client_signature_url && (
                           <Button
                             variant="accent"
@@ -288,10 +300,15 @@ export default function MyShipmentsPage() {
                           </Button>
                         )}
                         {load.status === "Delivered" && load.client_signature_url && (
-                          <div className="flex items-center gap-1 text-status-delivered mt-2">
-                            <FileCheck size={14} />
-                            <span className="text-xs font-medium">Signed</span>
-                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setViewingLoad(load)}
+                            className="mt-2"
+                          >
+                            <Eye size={14} className="mr-1" />
+                            View Details
+                          </Button>
                         )}
                       </div>
                     </div>
@@ -402,6 +419,103 @@ export default function MyShipmentsPage() {
                 </Button>
               </div>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* View Details Modal (Read-only) */}
+        <Dialog open={!!viewingLoad} onOpenChange={(open) => !open && setViewingLoad(null)}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                Shipment Details
+                {viewingLoad && <StatusBadge status={viewingLoad.status} />}
+              </DialogTitle>
+              <DialogDescription>
+                View your shipment information.
+              </DialogDescription>
+            </DialogHeader>
+            {viewingLoad && (
+              <div className="space-y-4 pt-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                      <MapPin size={12} className="text-status-pending" />
+                      Pickup Location
+                    </Label>
+                    <p className="text-sm font-medium">{viewingLoad.origin_address}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                      <MapPin size={12} className="text-status-delivered" />
+                      Delivery Location
+                    </Label>
+                    <p className="text-sm font-medium">{viewingLoad.destination_address}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Truck size={12} />
+                      Trailer Type
+                    </Label>
+                    <p className="text-sm font-medium">{viewingLoad.trailer_type}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Weight size={12} />
+                      Weight
+                    </Label>
+                    <p className="text-sm font-medium">{viewingLoad.weight_lbs.toLocaleString()} lbs</p>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Calendar size={12} />
+                      Pickup Date
+                    </Label>
+                    <p className="text-sm font-medium">{new Date(viewingLoad.pickup_date).toLocaleDateString()}</p>
+                  </div>
+                </div>
+
+                {viewingLoad.price_cents && (
+                  <div className="p-4 bg-accent/10 rounded-lg border border-accent/20">
+                    <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                      <DollarSign size={12} />
+                      Price
+                    </Label>
+                    <p className="text-2xl font-bold text-accent">
+                      ${(viewingLoad.price_cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                )}
+
+                {viewingLoad.driver_name && (
+                  <div className="p-4 bg-secondary/50 rounded-lg">
+                    <Label className="text-xs text-muted-foreground flex items-center gap-1 mb-2">
+                      <User size={12} />
+                      Driver Information
+                    </Label>
+                    <p className="text-sm font-medium">{viewingLoad.driver_name}</p>
+                    {viewingLoad.truck_number && (
+                      <p className="text-sm text-muted-foreground">Truck: {viewingLoad.truck_number}</p>
+                    )}
+                  </div>
+                )}
+
+                {viewingLoad.client_signature_url && (
+                  <div className="flex items-center gap-2 text-status-delivered">
+                    <FileCheck size={16} />
+                    <span className="text-sm font-medium">Delivery Confirmed</span>
+                  </div>
+                )}
+
+                <div className="flex justify-end pt-4">
+                  <Button variant="outline" onClick={() => setViewingLoad(null)}>
+                    Close
+                  </Button>
+                </div>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>
