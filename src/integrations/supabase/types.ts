@@ -16,13 +16,16 @@ export type Database = {
     Tables: {
       loads: {
         Row: {
+          assigned_at: string | null
           bol_image_url: string | null
           client_id: string
           client_signature_url: string | null
           created_at: string
+          delivered_at: string | null
           destination_address: string
           driver_name: string | null
           id: string
+          in_transit_at: string | null
           origin_address: string
           pickup_date: string
           price_cents: number | null
@@ -33,13 +36,16 @@ export type Database = {
           weight_lbs: number
         }
         Insert: {
+          assigned_at?: string | null
           bol_image_url?: string | null
           client_id: string
           client_signature_url?: string | null
           created_at?: string
+          delivered_at?: string | null
           destination_address: string
           driver_name?: string | null
           id?: string
+          in_transit_at?: string | null
           origin_address: string
           pickup_date: string
           price_cents?: number | null
@@ -50,13 +56,16 @@ export type Database = {
           weight_lbs: number
         }
         Update: {
+          assigned_at?: string | null
           bol_image_url?: string | null
           client_id?: string
           client_signature_url?: string | null
           created_at?: string
+          delivered_at?: string | null
           destination_address?: string
           driver_name?: string | null
           id?: string
+          in_transit_at?: string | null
           origin_address?: string
           pickup_date?: string
           price_cents?: number | null
