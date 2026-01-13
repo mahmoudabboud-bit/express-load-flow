@@ -5,6 +5,7 @@ import { sendNotification } from "@/lib/notifications";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/StatusBadge";
+import { SignatureCapture } from "@/components/SignatureCapture";
 import { 
   Truck, 
   MapPin, 
@@ -36,6 +37,7 @@ export function DriverDashboard() {
   const [completedLoads, setCompletedLoads] = useState<Load[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [showSignature, setShowSignature] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -67,13 +69,28 @@ export function DriverDashboard() {
     setLoading(false);
   };
 
-  const handleStatusUpdate = async (newStatus: "In-Transit" | "Delivered") => {
+  const handleStatusUpdate = async (newStatus: "In-Transit" | "Delivered", signatureDataUrl?: string) => {
     if (!currentLoad) return;
     
     setUpdating(true);
+
+    const updateData: Record<string, unknown> = {
+      status: newStatus,
+    };
+
+    if (newStatus === "In-Transit") {
+      updateData.in_transit_at = new Date().toISOString();
+    } else if (newStatus === "Delivered") {
+      updateData.delivered_at = new Date().toISOString();
+      if (signatureDataUrl) {
+        updateData.client_signature_url = signatureDataUrl;
+        updateData.signature_timestamp = new Date().toISOString();
+      }
+    }
+
     const { error } = await supabase
       .from("loads")
-      .update({ status: newStatus })
+      .update(updateData)
       .eq("id", currentLoad.id);
 
     if (error) {
@@ -114,6 +131,15 @@ export function DriverDashboard() {
       fetchLoads();
     }
     setUpdating(false);
+  };
+
+  const handleDeliveryClick = () => {
+    setShowSignature(true);
+  };
+
+  const handleSignatureSubmit = async (signatureDataUrl: string) => {
+    await handleStatusUpdate("Delivered", signatureDataUrl);
+    setShowSignature(false);
   };
 
   const openInMaps = (address: string) => {
@@ -232,7 +258,7 @@ export function DriverDashboard() {
                   variant="driver-action"
                   size="xl"
                   className="w-full py-6 text-lg bg-status-delivered hover:bg-status-delivered/90"
-                  onClick={() => handleStatusUpdate("Delivered")}
+                  onClick={handleDeliveryClick}
                   disabled={updating}
                 >
                   <CheckCircle className="mr-3" size={24} />
@@ -289,6 +315,17 @@ export function DriverDashboard() {
           </CardContent>
         </Card>
       )}
+      {/* Signature Capture Modal */}
+      <SignatureCapture
+        open={showSignature}
+        onClose={() => setShowSignature(false)}
+        onSign={handleSignatureSubmit}
+        loadInfo={currentLoad ? {
+          origin: currentLoad.origin_address,
+          destination: currentLoad.destination_address,
+          driverName: currentLoad.driver_name || undefined,
+        } : undefined}
+      />
     </div>
   );
 }

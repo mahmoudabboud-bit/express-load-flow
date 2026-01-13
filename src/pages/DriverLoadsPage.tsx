@@ -7,6 +7,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/StatusBadge";
+import { SignatureCapture } from "@/components/SignatureCapture";
 import { useToast } from "@/hooks/use-toast";
 import { 
   ArrowLeft, 
@@ -39,6 +40,7 @@ export default function DriverLoadsPage() {
   const [loads, setLoads] = useState<Load[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [signatureLoad, setSignatureLoad] = useState<Load | null>(null);
 
   useEffect(() => {
     if (user && userRole === "driver") {
@@ -71,7 +73,7 @@ export default function DriverLoadsPage() {
     setLoading(false);
   };
 
-  const handleStatusUpdate = async (load: Load, newStatus: "In-Transit" | "Delivered") => {
+  const handleStatusUpdate = async (load: Load, newStatus: "In-Transit" | "Delivered", signatureDataUrl?: string) => {
     setUpdating(load.id);
 
     const updateData: Record<string, unknown> = {
@@ -83,6 +85,10 @@ export default function DriverLoadsPage() {
       updateData.in_transit_at = new Date().toISOString();
     } else if (newStatus === "Delivered") {
       updateData.delivered_at = new Date().toISOString();
+      if (signatureDataUrl) {
+        updateData.client_signature_url = signatureDataUrl;
+        updateData.signature_timestamp = new Date().toISOString();
+      }
     }
     
     const { error } = await supabase
@@ -128,6 +134,17 @@ export default function DriverLoadsPage() {
       fetchLoads();
     }
     setUpdating(null);
+  };
+
+  const handleDeliveryClick = (load: Load) => {
+    setSignatureLoad(load);
+  };
+
+  const handleSignatureSubmit = async (signatureDataUrl: string) => {
+    if (signatureLoad) {
+      await handleStatusUpdate(signatureLoad, "Delivered", signatureDataUrl);
+      setSignatureLoad(null);
+    }
   };
 
   const openInMaps = (address: string) => {
@@ -281,7 +298,7 @@ export default function DriverLoadsPage() {
                             variant="accent"
                             size="lg"
                             className="w-full bg-status-delivered hover:bg-status-delivered/90"
-                            onClick={() => handleStatusUpdate(load, "Delivered")}
+                            onClick={() => handleDeliveryClick(load)}
                             disabled={updating === load.id}
                           >
                             {updating === load.id ? (
@@ -336,6 +353,18 @@ export default function DriverLoadsPage() {
             )}
           </>
         )}
+
+        {/* Signature Capture Modal */}
+        <SignatureCapture
+          open={!!signatureLoad}
+          onClose={() => setSignatureLoad(null)}
+          onSign={handleSignatureSubmit}
+          loadInfo={signatureLoad ? {
+            origin: signatureLoad.origin_address,
+            destination: signatureLoad.destination_address,
+            driverName: signatureLoad.driver_name || undefined,
+          } : undefined}
+        />
       </div>
     </DashboardLayout>
   );
