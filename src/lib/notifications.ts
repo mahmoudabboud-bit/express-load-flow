@@ -9,9 +9,10 @@ interface LoadData {
   weight_lbs?: number;
   driver_name?: string;
   truck_number?: string;
+  eta?: string;
 }
 
-type NotificationType = "load_submitted" | "load_approved" | "status_in_transit" | "status_delivered";
+type NotificationType = "load_submitted" | "load_approved" | "status_in_transit" | "status_delivered" | "eta_updated";
 
 export async function sendNotification(
   type: NotificationType,
