@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/lib/auth-context";
 import { Logo } from "@/components/Logo";
 import { NotificationBell } from "@/components/NotificationBell";
+import { PushNotificationPrompt } from "@/components/PushNotificationPrompt";
 import { Button } from "@/components/ui/button";
 import { 
   LayoutDashboard, 
@@ -155,6 +156,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
         <div className="p-4 lg:p-8">{children}</div>
       </main>
+
+      {/* Push Notification Prompt */}
+      <PushNotificationPrompt />
     </div>
   );
 }
