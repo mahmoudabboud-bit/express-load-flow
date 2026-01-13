@@ -39,6 +39,7 @@ interface Driver {
   truck_number: string;
   email: string;
   active: boolean;
+  activeLoads?: number;
 }
 
 export default function LoadQueuePage() {
@@ -70,7 +71,7 @@ export default function LoadQueuePage() {
 
   const fetchDrivers = async () => {
     // Fetch from the drivers table
-    const { data, error } = await supabase
+    const { data: driversData, error } = await supabase
       .from("drivers")
       .select("*")
       .eq("active", true)
@@ -78,9 +79,34 @@ export default function LoadQueuePage() {
 
     if (error) {
       console.error("Error fetching drivers:", error);
-    } else if (data) {
-      setDrivers(data);
+      return;
     }
+
+    if (!driversData) return;
+
+    // Fetch active load counts for each driver
+    const { data: activeCounts } = await supabase
+      .from("loads")
+      .select("driver_id")
+      .in("status", ["Assigned", "In-Transit"]);
+
+    // Count loads per driver
+    const loadCountMap: Record<string, number> = {};
+    if (activeCounts) {
+      activeCounts.forEach(load => {
+        if (load.driver_id) {
+          loadCountMap[load.driver_id] = (loadCountMap[load.driver_id] || 0) + 1;
+        }
+      });
+    }
+
+    // Add active load count to each driver
+    const driversWithCounts = driversData.map(driver => ({
+      ...driver,
+      activeLoads: loadCountMap[driver.user_id] || 0,
+    }));
+
+    setDrivers(driversWithCounts);
   };
 
   useEffect(() => {
@@ -391,7 +417,18 @@ export default function LoadQueuePage() {
                     ) : (
                       drivers.map((driver) => (
                         <SelectItem key={driver.id} value={driver.id}>
-                          {driver.first_name} {driver.last_name} - {driver.truck_type} ({driver.truck_number})
+                          <div className="flex items-center justify-between w-full gap-2">
+                            <span>{driver.first_name} {driver.last_name} - {driver.truck_type} ({driver.truck_number})</span>
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                              driver.activeLoads === 0 
+                                ? "bg-green-500/20 text-green-600" 
+                                : driver.activeLoads && driver.activeLoads >= 3 
+                                  ? "bg-red-500/20 text-red-600" 
+                                  : "bg-yellow-500/20 text-yellow-600"
+                            }`}>
+                              {driver.activeLoads || 0} active
+                            </span>
+                          </div>
                         </SelectItem>
                       ))
                     )}
