@@ -11,8 +11,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignatureCapture } from "@/components/SignatureCapture";
 import { ShipmentTimeline } from "@/components/ShipmentTimeline";
+import { generateDeliveryReceipt } from "@/lib/pdf-generator";
 import { useToast } from "@/hooks/use-toast";
-import { Package, Truck, Clock, CheckCircle, Plus, ArrowRight, Pencil, MapPin, Weight, Calendar, Loader2, FileCheck, PenTool, Eye, DollarSign, User } from "lucide-react";
+import { Package, Truck, Clock, CheckCircle, Plus, ArrowRight, Pencil, MapPin, Weight, Calendar, Loader2, FileCheck, PenTool, Eye, DollarSign, User, Download } from "lucide-react";
 
 interface Load {
   id: string;
@@ -543,7 +544,16 @@ export function ClientDashboard() {
                 />
               </div>
 
-              <div className="flex justify-end pt-4">
+              <div className="flex justify-end gap-3 pt-4">
+                {viewingLoad.status === "Delivered" && viewingLoad.client_signature_url && (
+                  <Button
+                    variant="accent"
+                    onClick={() => generateDeliveryReceipt(viewingLoad)}
+                  >
+                    <Download size={16} className="mr-2" />
+                    Download Receipt
+                  </Button>
+                )}
                 <Button variant="outline" onClick={() => setViewingLoad(null)}>
                   Close
                 </Button>

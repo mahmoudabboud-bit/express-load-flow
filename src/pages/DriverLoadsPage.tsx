@@ -85,9 +85,47 @@ export default function DriverLoadsPage() {
       updateData.in_transit_at = new Date().toISOString();
     } else if (newStatus === "Delivered") {
       updateData.delivered_at = new Date().toISOString();
+      
+      // Upload signature to storage if provided
       if (signatureDataUrl) {
-        updateData.client_signature_url = signatureDataUrl;
-        updateData.signature_timestamp = new Date().toISOString();
+        try {
+          // Convert base64 to blob
+          const base64Data = signatureDataUrl.split(',')[1];
+          const byteCharacters = atob(base64Data);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          const blob = new Blob([byteArray], { type: 'image/png' });
+          
+          const fileName = `${load.id}_${Date.now()}.png`;
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('signatures')
+            .upload(fileName, blob, { contentType: 'image/png' });
+          
+          if (uploadError) {
+            console.error("Signature upload error:", uploadError);
+            throw uploadError;
+          }
+          
+          // Get public URL
+          const { data: publicUrlData } = supabase.storage
+            .from('signatures')
+            .getPublicUrl(fileName);
+          
+          updateData.client_signature_url = publicUrlData.publicUrl;
+          updateData.signature_timestamp = new Date().toISOString();
+        } catch (uploadErr) {
+          console.error("Failed to upload signature:", uploadErr);
+          toast({
+            variant: "destructive",
+            title: "Signature upload failed",
+            description: "Could not save signature. Please try again.",
+          });
+          setUpdating(null);
+          return;
+        }
       }
     }
     
