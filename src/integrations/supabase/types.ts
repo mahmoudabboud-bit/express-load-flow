@@ -18,12 +18,15 @@ export type Database = {
         Row: {
           bol_image_url: string | null
           client_id: string
+          client_signature_url: string | null
           created_at: string
           destination_address: string
           driver_name: string | null
           id: string
           origin_address: string
           pickup_date: string
+          price_cents: number | null
+          signature_timestamp: string | null
           status: string
           trailer_type: string
           truck_number: string | null
@@ -32,12 +35,15 @@ export type Database = {
         Insert: {
           bol_image_url?: string | null
           client_id: string
+          client_signature_url?: string | null
           created_at?: string
           destination_address: string
           driver_name?: string | null
           id?: string
           origin_address: string
           pickup_date: string
+          price_cents?: number | null
+          signature_timestamp?: string | null
           status?: string
           trailer_type: string
           truck_number?: string | null
@@ -46,12 +52,15 @@ export type Database = {
         Update: {
           bol_image_url?: string | null
           client_id?: string
+          client_signature_url?: string | null
           created_at?: string
           destination_address?: string
           driver_name?: string | null
           id?: string
           origin_address?: string
           pickup_date?: string
+          price_cents?: number | null
+          signature_timestamp?: string | null
           status?: string
           trailer_type?: string
           truck_number?: string | null

@@ -23,12 +23,13 @@ interface Load {
   id: string;
   origin_address: string;
   destination_address: string;
-  status: "Pending" | "Approved" | "In-Transit" | "Delivered";
+  status: "Pending" | "Assigned" | "In-Transit" | "Delivered";
   trailer_type: string;
   weight_lbs: number;
   pickup_date: string;
   driver_name: string | null;
   truck_number: string | null;
+  price_cents: number | null;
   client_id: string;
 }
 
@@ -144,7 +145,7 @@ export default function DriverLoadsPage() {
     return <Navigate to="/dashboard" replace />;
   }
 
-  const activeLoads = loads.filter(l => l.status === "Approved" || l.status === "In-Transit");
+  const activeLoads = loads.filter(l => l.status === "Assigned" || l.status === "In-Transit");
   const completedLoads = loads.filter(l => l.status === "Delivered");
 
   return (
@@ -250,7 +251,7 @@ export default function DriverLoadsPage() {
                         </div>
 
                         {/* Actions */}
-                        {load.status === "Approved" && (
+                        {load.status === "Assigned" && (
                           <Button
                             variant="accent"
                             size="lg"

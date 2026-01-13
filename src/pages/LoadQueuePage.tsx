@@ -12,18 +12,19 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Package, ArrowLeft, Loader2, Filter, UserCheck, Truck } from "lucide-react";
+import { Package, ArrowLeft, Loader2, Filter, UserCheck, Truck, DollarSign } from "lucide-react";
 
 interface Load {
   id: string;
   origin_address: string;
   destination_address: string;
-  status: "Pending" | "Approved" | "In-Transit" | "Delivered";
+  status: "Pending" | "Assigned" | "In-Transit" | "Delivered";
   trailer_type: string;
   weight_lbs: number;
   pickup_date: string;
   driver_name: string | null;
   truck_number: string | null;
+  price_cents: number | null;
   created_at: string;
   client_id: string;
 }
@@ -42,6 +43,7 @@ export default function LoadQueuePage() {
   const [selectedLoad, setSelectedLoad] = useState<Load | null>(null);
   const [driverName, setDriverName] = useState("");
   const [truckNumber, setTruckNumber] = useState("");
+  const [price, setPrice] = useState("");
   const [approving, setApproving] = useState(false);
 
   useEffect(() => {
@@ -78,15 +80,26 @@ export default function LoadQueuePage() {
     setSelectedLoad(load);
     setDriverName("");
     setTruckNumber("");
+    setPrice("");
     setApprovalModalOpen(true);
   };
 
   const handleApprove = async () => {
-    if (!selectedLoad || !driverName.trim() || !truckNumber.trim()) {
+    if (!selectedLoad || !driverName.trim() || !truckNumber.trim() || !price.trim()) {
       toast({
         variant: "destructive",
         title: "Missing information",
-        description: "Please enter driver name and truck number.",
+        description: "Please enter driver name, truck number, and price.",
+      });
+      return;
+    }
+
+    const priceInCents = Math.round(parseFloat(price) * 100);
+    if (isNaN(priceInCents) || priceInCents <= 0) {
+      toast({
+        variant: "destructive",
+        title: "Invalid price",
+        description: "Please enter a valid price.",
       });
       return;
     }
@@ -96,9 +109,10 @@ export default function LoadQueuePage() {
     const { error } = await supabase
       .from("loads")
       .update({
-        status: "Approved",
+        status: "Assigned",
         driver_name: driverName.trim(),
         truck_number: truckNumber.trim(),
+        price_cents: priceInCents,
       })
       .eq("id", selectedLoad.id);
 
@@ -188,7 +202,7 @@ export default function LoadQueuePage() {
             <SelectContent>
               <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="Pending">Pending</SelectItem>
-              <SelectItem value="Approved">Approved</SelectItem>
+              <SelectItem value="Assigned">Assigned</SelectItem>
               <SelectItem value="In-Transit">In Transit</SelectItem>
               <SelectItem value="Delivered">Delivered</SelectItem>
             </SelectContent>
@@ -317,6 +331,22 @@ export default function LoadQueuePage() {
                   placeholder="TRK-1234"
                   value={truckNumber}
                   onChange={(e) => setTruckNumber(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="price" className="flex items-center gap-2">
+                  <DollarSign size={16} />
+                  Price ($)
+                </Label>
+                <Input
+                  id="price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="1500.00"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
                 />
               </div>
             </div>

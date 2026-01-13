@@ -10,19 +10,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SignatureCapture } from "@/components/SignatureCapture";
 import { useToast } from "@/hooks/use-toast";
-import { Package, Plus, ArrowLeft, Loader2, Filter, Pencil, MapPin, Truck, Weight, Calendar } from "lucide-react";
+import { Package, Plus, ArrowLeft, Loader2, Filter, Pencil, MapPin, Truck, Weight, Calendar, PenTool, FileCheck } from "lucide-react";
 
 interface Load {
   id: string;
   origin_address: string;
   destination_address: string;
-  status: "Pending" | "Approved" | "In-Transit" | "Delivered";
+  status: "Pending" | "Assigned" | "In-Transit" | "Delivered";
   trailer_type: string;
   weight_lbs: number;
   pickup_date: string;
   driver_name: string | null;
   truck_number: string | null;
+  price_cents: number | null;
+  client_signature_url: string | null;
   created_at: string;
 }
 
@@ -35,6 +38,7 @@ export default function MyShipmentsPage() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [editingLoad, setEditingLoad] = useState<Load | null>(null);
+  const [signingLoad, setSigningLoad] = useState<Load | null>(null);
   const [editForm, setEditForm] = useState({
     origin_address: "",
     destination_address: "",
@@ -85,6 +89,33 @@ export default function MyShipmentsPage() {
       fetchLoads();
     }
     setSaving(false);
+  };
+
+  const handleSignDelivery = async (signatureDataUrl: string) => {
+    if (!signingLoad) return;
+
+    const { error } = await supabase
+      .from("loads")
+      .update({
+        client_signature_url: signatureDataUrl,
+        signature_timestamp: new Date().toISOString(),
+      })
+      .eq("id", signingLoad.id);
+
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Failed to save signature",
+        description: error.message,
+      });
+      throw error;
+    }
+
+    toast({
+      title: "Delivery Confirmed!",
+      description: "Thank you for confirming receipt of your shipment.",
+    });
+    fetchLoads();
   };
 
   useEffect(() => {
@@ -158,7 +189,7 @@ export default function MyShipmentsPage() {
             <SelectContent>
               <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="Pending">Pending</SelectItem>
-              <SelectItem value="Approved">Approved</SelectItem>
+              <SelectItem value="Assigned">Assigned</SelectItem>
               <SelectItem value="In-Transit">In Transit</SelectItem>
               <SelectItem value="Delivered">Delivered</SelectItem>
             </SelectContent>
@@ -240,6 +271,23 @@ export default function MyShipmentsPage() {
                             Edit
                           </Button>
                         )}
+                        {load.status === "Delivered" && !load.client_signature_url && (
+                          <Button
+                            variant="accent"
+                            size="sm"
+                            onClick={() => setSigningLoad(load)}
+                            className="mt-2"
+                          >
+                            <PenTool size={14} className="mr-1" />
+                            Sign to Confirm
+                          </Button>
+                        )}
+                        {load.status === "Delivered" && load.client_signature_url && (
+                          <div className="flex items-center gap-1 text-status-delivered mt-2">
+                            <FileCheck size={14} />
+                            <span className="text-xs font-medium">Signed</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -248,6 +296,18 @@ export default function MyShipmentsPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Signature Modal */}
+        <SignatureCapture
+          open={!!signingLoad}
+          onClose={() => setSigningLoad(null)}
+          onSign={handleSignDelivery}
+          loadInfo={signingLoad ? {
+            origin: signingLoad.origin_address,
+            destination: signingLoad.destination_address,
+            driverName: signingLoad.driver_name || undefined,
+          } : undefined}
+        />
 
         {/* Edit Modal */}
         <Dialog open={!!editingLoad} onOpenChange={(open) => !open && setEditingLoad(null)}>
