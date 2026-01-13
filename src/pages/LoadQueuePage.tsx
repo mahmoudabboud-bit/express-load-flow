@@ -12,7 +12,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Package, ArrowLeft, Loader2, Filter, UserCheck, Truck, DollarSign, Pencil } from "lucide-react";
+import { Package, ArrowLeft, Loader2, Filter, UserCheck, Truck, DollarSign, Pencil, Eye, MapPin, FileCheck, CheckCircle } from "lucide-react";
 
 interface Load {
   id: string;
@@ -28,6 +28,10 @@ interface Load {
   created_at: string;
   client_id: string;
   driver_id: string | null;
+  client_signature_url: string | null;
+  delivered_at: string | null;
+  assigned_at: string | null;
+  in_transit_at: string | null;
 }
 
 interface Driver {
@@ -61,6 +65,7 @@ export default function LoadQueuePage() {
   const [approving, setApproving] = useState(false);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [isEditing, setIsEditing] = useState(false);
+  const [viewingLoad, setViewingLoad] = useState<Load | null>(null);
 
   useEffect(() => {
     if (user && userRole === "dispatcher") {
@@ -362,13 +367,33 @@ export default function LoadQueuePage() {
                           </Button>
                         )}
                         {load.status === "Assigned" && (
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setViewingLoad(load)}
+                            >
+                              <Eye className="mr-2" size={16} />
+                              View
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openApprovalModal(load, true)}
+                            >
+                              <Pencil className="mr-2" size={16} />
+                              Edit
+                            </Button>
+                          </div>
+                        )}
+                        {(load.status === "In-Transit" || load.status === "Delivered") && (
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => openApprovalModal(load, true)}
+                            onClick={() => setViewingLoad(load)}
                           >
-                            <Pencil className="mr-2" size={16} />
-                            Edit
+                            <Eye className="mr-2" size={16} />
+                            View Details
                           </Button>
                         )}
                       </div>
@@ -473,6 +498,112 @@ export default function LoadQueuePage() {
             </Button>
             <Button variant="accent" onClick={handleApprove} disabled={approving}>
               {approving ? <Loader2 className="w-4 h-4 animate-spin" /> : isEditing ? "Save Changes" : "Assign Load"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Details Modal */}
+      <Dialog open={!!viewingLoad} onOpenChange={(open) => !open && setViewingLoad(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileCheck size={20} />
+              Load Details
+            </DialogTitle>
+          </DialogHeader>
+
+          {viewingLoad && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <StatusBadge status={viewingLoad.status} />
+                <span className="text-sm text-muted-foreground">
+                  {viewingLoad.trailer_type} • {viewingLoad.weight_lbs.toLocaleString()} lbs
+                </span>
+              </div>
+
+              <div className="grid gap-3 text-sm">
+                <div className="flex items-start gap-3">
+                  <MapPin size={16} className="text-green-500 mt-0.5 shrink-0" />
+                  <div>
+                    <div className="text-muted-foreground text-xs">Pickup</div>
+                    <div className="font-medium">{viewingLoad.origin_address}</div>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <MapPin size={16} className="text-accent mt-0.5 shrink-0" />
+                  <div>
+                    <div className="text-muted-foreground text-xs">Delivery</div>
+                    <div className="font-medium">{viewingLoad.destination_address}</div>
+                  </div>
+                </div>
+              </div>
+
+              {viewingLoad.driver_name && (
+                <div className="p-3 bg-secondary/50 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Truck size={16} className="text-accent" />
+                    <span className="font-medium">Driver & Truck</span>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {viewingLoad.driver_name} • {viewingLoad.truck_number}
+                  </div>
+                  {viewingLoad.price_cents && (
+                    <div className="text-sm text-muted-foreground mt-1">
+                      Price: ${(viewingLoad.price_cents / 100).toFixed(2)}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                {viewingLoad.assigned_at && (
+                  <div className="p-2 bg-muted/50 rounded">
+                    <div className="text-muted-foreground">Assigned</div>
+                    <div className="font-medium">{new Date(viewingLoad.assigned_at).toLocaleString()}</div>
+                  </div>
+                )}
+                {viewingLoad.in_transit_at && (
+                  <div className="p-2 bg-muted/50 rounded">
+                    <div className="text-muted-foreground">In Transit</div>
+                    <div className="font-medium">{new Date(viewingLoad.in_transit_at).toLocaleString()}</div>
+                  </div>
+                )}
+                {viewingLoad.delivered_at && (
+                  <div className="p-2 bg-muted/50 rounded">
+                    <div className="text-muted-foreground">Delivered</div>
+                    <div className="font-medium">{new Date(viewingLoad.delivered_at).toLocaleString()}</div>
+                  </div>
+                )}
+              </div>
+
+              {viewingLoad.status === "Delivered" && viewingLoad.client_signature_url && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <CheckCircle size={16} className="text-green-500" />
+                    Client Signature
+                  </div>
+                  <div className="border rounded-lg p-3 bg-white">
+                    <img
+                      src={viewingLoad.client_signature_url}
+                      alt="Client signature"
+                      className="max-h-24 w-auto mx-auto"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {viewingLoad.status === "Delivered" && !viewingLoad.client_signature_url && (
+                <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-sm text-yellow-600">
+                  No signature captured for this delivery.
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewingLoad(null)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
