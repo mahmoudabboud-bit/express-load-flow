@@ -103,6 +103,7 @@ export type Database = {
           destination_address: string
           driver_id: string | null
           driver_name: string | null
+          eta: string | null
           id: string
           in_transit_at: string | null
           origin_address: string
@@ -124,6 +125,7 @@ export type Database = {
           destination_address: string
           driver_id?: string | null
           driver_name?: string | null
+          eta?: string | null
           id?: string
           in_transit_at?: string | null
           origin_address: string
@@ -145,6 +147,7 @@ export type Database = {
           destination_address?: string
           driver_id?: string | null
           driver_name?: string | null
+          eta?: string | null
           id?: string
           in_transit_at?: string | null
           origin_address?: string
