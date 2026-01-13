@@ -47,11 +47,20 @@ export default function DriverLoadsPage() {
   }, [user, userRole]);
 
   const fetchLoads = async () => {
+    if (!user?.id) return;
+
+    // First, check if this user is linked in the drivers table
+    const { data: driverRecord } = await supabase
+      .from("drivers")
+      .select("id, user_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
     // Fetch loads assigned to this driver by driver_id
     const { data, error } = await supabase
       .from("loads")
       .select("*")
-      .eq("driver_id", user?.id)
+      .eq("driver_id", user.id)
       .order("created_at", { ascending: false });
 
     if (error) {
