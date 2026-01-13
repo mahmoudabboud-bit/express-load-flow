@@ -532,7 +532,20 @@ export default function LoadQueuePage() {
                 )}
                 <div><span className="text-muted-foreground">From:</span> {selectedLoad.origin_address}</div>
                 <div><span className="text-muted-foreground">To:</span> {selectedLoad.destination_address}</div>
-                <div><span className="text-muted-foreground">Pickup:</span> {new Date(selectedLoad.pickup_date).toLocaleDateString()}</div>
+                <div className="mt-2 pt-2 border-t border-border/50">
+                  <div>
+                    <span className="text-muted-foreground">Pickup:</span>{" "}
+                    {new Date(selectedLoad.pickup_date).toLocaleDateString()}
+                    {selectedLoad.pickup_time && ` at ${selectedLoad.pickup_time.slice(0, 5)}`}
+                  </div>
+                  {selectedLoad.delivery_date && (
+                    <div>
+                      <span className="text-muted-foreground">Delivery:</span>{" "}
+                      {new Date(selectedLoad.delivery_date).toLocaleDateString()}
+                      {selectedLoad.delivery_time && ` at ${selectedLoad.delivery_time.slice(0, 5)}`}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2">
