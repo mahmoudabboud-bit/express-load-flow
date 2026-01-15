@@ -450,6 +450,11 @@ export default function LoadQueuePage() {
                           <div className="text-muted-foreground">
                             Pickup: {new Date(load.pickup_date).toLocaleDateString()}
                           </div>
+                          {(load as any).delivery_asap && (
+                            <div className="text-accent font-medium">
+                              Delivery: ASAP
+                            </div>
+                          )}
                           {load.driver_name && (
                             <div className="text-foreground font-medium">
                               {load.driver_name} • {load.truck_number}
