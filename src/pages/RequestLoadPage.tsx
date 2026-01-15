@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { sendNotification } from "@/lib/notifications";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +31,7 @@ export default function RequestLoadPage() {
     pickup_time: "",
     delivery_date: "",
     delivery_time: "",
+    delivery_asap: false,
   });
 
   if (authLoading) {
@@ -220,27 +222,48 @@ export default function RequestLoadPage() {
 
               {/* Delivery Date & Time */}
               <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Clock size={16} className="text-accent" />
-                  Delivery Date & Time
-                </Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="delivery_date"
-                    type="date"
-                    min={formData.pickup_date || new Date().toISOString().split("T")[0]}
-                    value={formData.delivery_date}
-                    onChange={(e) => setFormData({ ...formData, delivery_date: e.target.value })}
-                    className="flex-1"
-                  />
-                  <Input
-                    id="delivery_time"
-                    type="time"
-                    value={formData.delivery_time}
-                    onChange={(e) => setFormData({ ...formData, delivery_time: e.target.value })}
-                    className="w-[140px]"
-                  />
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-2">
+                    <Clock size={16} className="text-accent" />
+                    Delivery Date & Time
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="delivery_asap"
+                      checked={formData.delivery_asap}
+                      onCheckedChange={(checked) => 
+                        setFormData({ 
+                          ...formData, 
+                          delivery_asap: checked === true,
+                          delivery_date: checked ? "" : formData.delivery_date,
+                          delivery_time: checked ? "" : formData.delivery_time,
+                        })
+                      }
+                    />
+                    <Label htmlFor="delivery_asap" className="text-sm font-medium cursor-pointer">
+                      ASAP
+                    </Label>
+                  </div>
                 </div>
+                {!formData.delivery_asap && (
+                  <div className="flex gap-2">
+                    <Input
+                      id="delivery_date"
+                      type="date"
+                      min={formData.pickup_date || new Date().toISOString().split("T")[0]}
+                      value={formData.delivery_date}
+                      onChange={(e) => setFormData({ ...formData, delivery_date: e.target.value })}
+                      className="flex-1"
+                    />
+                    <Input
+                      id="delivery_time"
+                      type="time"
+                      value={formData.delivery_time}
+                      onChange={(e) => setFormData({ ...formData, delivery_time: e.target.value })}
+                      className="w-[140px]"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="pt-4">
