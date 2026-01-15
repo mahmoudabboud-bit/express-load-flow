@@ -538,7 +538,12 @@ export default function LoadQueuePage() {
                     {new Date(selectedLoad.pickup_date).toLocaleDateString()}
                     {selectedLoad.pickup_time && ` at ${format(new Date(`2000-01-01T${selectedLoad.pickup_time}`), "h:mm a")}`}
                   </div>
-                  {selectedLoad.delivery_date && (
+                {(selectedLoad as any).delivery_asap ? (
+                    <div>
+                      <span className="text-muted-foreground">Delivery:</span>{" "}
+                      <span className="font-medium text-accent">ASAP</span>
+                    </div>
+                  ) : selectedLoad.delivery_date && (
                     <div>
                       <span className="text-muted-foreground">Delivery:</span>{" "}
                       {new Date(selectedLoad.delivery_date).toLocaleDateString()}

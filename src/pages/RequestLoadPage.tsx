@@ -72,8 +72,9 @@ export default function RequestLoadPage() {
       weight_lbs: parseInt(formData.weight_lbs),
       pickup_date: formData.pickup_date,
       pickup_time: formData.pickup_time || null,
-      delivery_date: formData.delivery_date || null,
-      delivery_time: formData.delivery_time || null,
+      delivery_date: formData.delivery_asap ? null : (formData.delivery_date || null),
+      delivery_time: formData.delivery_asap ? null : (formData.delivery_time || null),
+      delivery_asap: formData.delivery_asap,
       status: "Pending",
     }).select().single();
 
