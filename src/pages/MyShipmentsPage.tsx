@@ -38,7 +38,7 @@ interface Load {
   eta: string | null;
 }
 
-const trailerTypes = ["Dry Van", "Reefer", "Flatbed", "Stepdeck"] as const;
+const trailerTypes = ["Flat Bed", "Step Deck", "Minifloat", "1Ton"] as const;
 
 export default function MyShipmentsPage() {
   const { user, userRole, loading: authLoading } = useAuth();
