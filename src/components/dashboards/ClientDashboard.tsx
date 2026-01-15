@@ -33,7 +33,7 @@ interface Load {
   delivered_at: string | null;
 }
 
-const trailerTypes = ["Dry Van", "Reefer", "Flatbed", "Stepdeck"] as const;
+const trailerTypes = ["Flat Bed", "Step Deck", "Minifloat", "1Ton"] as const;
 
 export function ClientDashboard() {
   const { user } = useAuth();

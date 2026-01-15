@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { MapPin, Truck, Weight, Calendar, Loader2, ArrowLeft, Clock } from "lucide-react";
 import { Navigate, Link } from "react-router-dom";
 
-const trailerTypes = ["Dry Van", "Reefer", "Flatbed", "Stepdeck"] as const;
+const trailerTypes = ["Flat Bed", "Step Deck", "Minifloat", "1Ton"] as const;
 
 export default function RequestLoadPage() {
   const { user, userRole, loading: authLoading } = useAuth();
