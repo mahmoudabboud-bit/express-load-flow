@@ -100,6 +100,7 @@ export type Database = {
           client_signature_url: string | null
           created_at: string
           delivered_at: string | null
+          delivery_asap: boolean | null
           delivery_date: string | null
           delivery_time: string | null
           destination_address: string
@@ -125,6 +126,7 @@ export type Database = {
           client_signature_url?: string | null
           created_at?: string
           delivered_at?: string | null
+          delivery_asap?: boolean | null
           delivery_date?: string | null
           delivery_time?: string | null
           destination_address: string
@@ -150,6 +152,7 @@ export type Database = {
           client_signature_url?: string | null
           created_at?: string
           delivered_at?: string | null
+          delivery_asap?: boolean | null
           delivery_date?: string | null
           delivery_time?: string | null
           destination_address?: string
