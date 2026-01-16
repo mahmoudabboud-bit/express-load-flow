@@ -143,6 +143,39 @@ export default function MyShipmentsPage() {
   useEffect(() => {
     if (user) {
       fetchLoads();
+
+      // Subscribe to realtime changes on loads table for this client
+      const channel = supabase
+        .channel('client-loads-realtime')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'loads',
+            filter: `client_id=eq.${user.id}`,
+          },
+          (payload) => {
+            if (payload.eventType === 'INSERT') {
+              setLoads((prev) => [payload.new as Load, ...prev]);
+            } else if (payload.eventType === 'UPDATE') {
+              setLoads((prev) =>
+                prev.map((load) =>
+                  load.id === payload.new.id ? (payload.new as Load) : load
+                )
+              );
+            } else if (payload.eventType === 'DELETE') {
+              setLoads((prev) =>
+                prev.filter((load) => load.id !== payload.old.id)
+              );
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [user]);
 
