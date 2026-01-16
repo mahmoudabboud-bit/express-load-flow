@@ -19,7 +19,7 @@ interface Load {
   id: string;
   origin_address: string;
   destination_address: string;
-  status: "Pending" | "Assigned" | "In-Transit" | "Delivered";
+  status: "Pending" | "Assigned" | "Arrived" | "Loaded" | "In-Transit" | "Arrived at Delivery" | "Delivered";
   trailer_type: string;
   weight_lbs: number;
   pickup_date: string;
@@ -29,7 +29,10 @@ interface Load {
   client_signature_url: string | null;
   created_at: string;
   assigned_at: string | null;
+  arrived_at: string | null;
+  loaded_at: string | null;
   in_transit_at: string | null;
+  arrived_at_delivery_at: string | null;
   delivered_at: string | null;
 }
 
@@ -547,7 +550,10 @@ export function ClientDashboard() {
                   currentStatus={viewingLoad.status}
                   createdAt={viewingLoad.created_at}
                   assignedAt={viewingLoad.assigned_at}
+                  arrivedAt={viewingLoad.arrived_at}
+                  loadedAt={viewingLoad.loaded_at}
                   inTransitAt={viewingLoad.in_transit_at}
+                  arrivedAtDeliveryAt={viewingLoad.arrived_at_delivery_at}
                   deliveredAt={viewingLoad.delivered_at}
                 />
               </div>

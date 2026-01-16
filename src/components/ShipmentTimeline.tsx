@@ -1,4 +1,4 @@
-import { Check, Clock, Truck, Package, MapPin } from "lucide-react";
+import { Check, Clock, Truck, Package, MapPin, BoxIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface TimelineStep {
@@ -11,10 +11,13 @@ interface TimelineStep {
 }
 
 interface ShipmentTimelineProps {
-  currentStatus: "Pending" | "Assigned" | "In-Transit" | "Delivered";
+  currentStatus: "Pending" | "Assigned" | "Arrived" | "Loaded" | "In-Transit" | "Arrived at Delivery" | "Delivered";
   createdAt: string;
   assignedAt?: string | null;
+  arrivedAt?: string | null;
+  loadedAt?: string | null;
   inTransitAt?: string | null;
+  arrivedAtDeliveryAt?: string | null;
   deliveredAt?: string | null;
 }
 
@@ -22,10 +25,13 @@ export function ShipmentTimeline({
   currentStatus,
   createdAt,
   assignedAt,
+  arrivedAt,
+  loadedAt,
   inTransitAt,
+  arrivedAtDeliveryAt,
   deliveredAt,
 }: ShipmentTimelineProps) {
-  const statusOrder = ["Pending", "Assigned", "In-Transit", "Delivered"];
+  const statusOrder = ["Pending", "Assigned", "Arrived", "Loaded", "In-Transit", "Arrived at Delivery", "Delivered"];
   const currentIndex = statusOrder.indexOf(currentStatus);
 
   const formatDate = (dateStr: string | null) => {
@@ -57,19 +63,43 @@ export function ShipmentTimeline({
       isCurrent: currentStatus === "Assigned",
     },
     {
+      status: "Arrived",
+      label: "Arrived at Pickup",
+      timestamp: arrivedAt || null,
+      icon: <MapPin size={16} />,
+      isCompleted: currentIndex >= 2,
+      isCurrent: currentStatus === "Arrived",
+    },
+    {
+      status: "Loaded",
+      label: "Loaded",
+      timestamp: loadedAt || null,
+      icon: <BoxIcon size={16} />,
+      isCompleted: currentIndex >= 3,
+      isCurrent: currentStatus === "Loaded",
+    },
+    {
       status: "In-Transit",
       label: "In Transit",
       timestamp: inTransitAt || null,
       icon: <Truck size={16} />,
-      isCompleted: currentIndex >= 2,
+      isCompleted: currentIndex >= 4,
       isCurrent: currentStatus === "In-Transit",
+    },
+    {
+      status: "Arrived at Delivery",
+      label: "Arrived at Drop Off",
+      timestamp: arrivedAtDeliveryAt || null,
+      icon: <MapPin size={16} />,
+      isCompleted: currentIndex >= 5,
+      isCurrent: currentStatus === "Arrived at Delivery",
     },
     {
       status: "Delivered",
       label: "Delivered",
       timestamp: deliveredAt || null,
-      icon: <MapPin size={16} />,
-      isCompleted: currentIndex >= 3,
+      icon: <Check size={16} />,
+      isCompleted: currentIndex >= 6,
       isCurrent: currentStatus === "Delivered",
     },
   ];
@@ -78,17 +108,17 @@ export function ShipmentTimeline({
     <div className="py-4">
       <div className="relative">
         {steps.map((step, index) => (
-          <div key={step.status} className="flex items-start mb-6 last:mb-0">
+          <div key={step.status} className="flex items-start mb-4 last:mb-0">
             {/* Connector line */}
             {index < steps.length - 1 && (
               <div
                 className={cn(
-                  "absolute w-0.5 h-[calc(100%-2rem)] left-[15px] top-8",
+                  "absolute w-0.5 left-[15px]",
                   step.isCompleted && steps[index + 1].isCompleted
                     ? "bg-accent"
                     : "bg-border"
                 )}
-                style={{ top: `${index * 48 + 32}px`, height: "32px" }}
+                style={{ top: `${index * 40 + 32}px`, height: "24px" }}
               />
             )}
 
