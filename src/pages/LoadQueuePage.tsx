@@ -62,6 +62,8 @@ interface Driver {
   email: string;
   active: boolean;
   activeLoads?: number;
+  availability_status: string | null;
+  available_at: string | null;
 }
 
 export default function LoadQueuePage() {
@@ -97,7 +99,7 @@ export default function LoadQueuePage() {
   }, [user, userRole]);
 
   const fetchDrivers = async () => {
-    // Fetch from the drivers table
+    // Fetch from the drivers table including availability fields
     const { data: driversData, error } = await supabase
       .from("drivers")
       .select("*")
@@ -135,6 +137,11 @@ export default function LoadQueuePage() {
 
     setDrivers(driversWithCounts);
   };
+
+  // Filter drivers to only show available ones for assignment
+  const availableDrivers = drivers.filter(
+    driver => driver.availability_status === "Available" || driver.availability_status === null
+  );
 
   useEffect(() => {
     const approveId = searchParams.get("approve");
@@ -571,12 +578,12 @@ export default function LoadQueuePage() {
                     <SelectValue placeholder="Select a driver" />
                   </SelectTrigger>
                   <SelectContent>
-                    {drivers.length === 0 ? (
+                    {availableDrivers.length === 0 ? (
                       <div className="px-3 py-2 text-sm text-muted-foreground">
-                        No drivers available. <Link to="/dashboard/drivers" className="text-accent underline">Add drivers first</Link>.
+                        No available drivers. <Link to="/dashboard/drivers" className="text-accent underline">Manage drivers</Link>.
                       </div>
                     ) : (
-                      drivers.map((driver) => (
+                      availableDrivers.map((driver) => (
                         <SelectItem key={driver.id} value={driver.id}>
                           <div className="flex items-center justify-between w-full gap-2">
                             <span>{driver.first_name} {driver.last_name} - {driver.truck_type} ({driver.truck_number})</span>
