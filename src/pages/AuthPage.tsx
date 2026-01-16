@@ -30,7 +30,7 @@ export default function AuthPage() {
   const [truckNumber, setTruckNumber] = useState("");
   const [role, setRole] = useState<UserRole>("client");
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string; fullName?: string; firstName?: string; lastName?: string; phoneNumber?: string; address?: string; truckNumber?: string }>();
+  const [errors, setErrors] = useState<{ email?: string; password?: string; fullName?: string; firstName?: string; lastName?: string; phoneNumber?: string; address?: string; truckNumber?: string }>({});
 
   const { signIn, signUp, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
