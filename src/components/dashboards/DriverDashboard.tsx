@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
-import { sendNotification } from "@/lib/notifications";
+import { sendNotification, sendDriverAvailabilityNotification } from "@/lib/notifications";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -91,6 +91,7 @@ export function DriverDashboard() {
   const handleAvailabilityUpdate = async (newStatus: AvailabilityStatus) => {
     if (!user?.id) return;
     
+    const previousStatus = availabilityStatus;
     setUpdatingAvailability(true);
     setAvailabilityStatus(newStatus);
     
@@ -101,6 +102,13 @@ export function DriverDashboard() {
       dateWithTime.setHours(hours, minutes, 0, 0);
       availableAt = dateWithTime.toISOString();
     }
+    
+    // Get driver info for notification
+    const { data: driverInfo } = await supabase
+      .from("drivers")
+      .select("first_name, last_name, truck_number")
+      .eq("user_id", user.id)
+      .maybeSingle();
     
     const { error } = await supabase
       .from("drivers")
@@ -116,11 +124,23 @@ export function DriverDashboard() {
         title: "Update failed",
         description: "Could not update availability status.",
       });
+      setAvailabilityStatus(previousStatus);
     } else {
       toast({
         title: "Status Updated",
         description: `Your availability is now: ${newStatus}`,
       });
+      
+      // Send notification to dispatchers
+      if (driverInfo) {
+        await sendDriverAvailabilityNotification({
+          driverName: `${driverInfo.first_name} ${driverInfo.last_name}`,
+          previousStatus,
+          newStatus,
+          availableAt,
+          truckNumber: driverInfo.truck_number,
+        });
+      }
     }
     
     setUpdatingAvailability(false);
@@ -129,17 +149,26 @@ export function DriverDashboard() {
   const handleAvailableAtSave = async () => {
     if (!user?.id || !availableAtDate) return;
     
+    const previousStatus = availabilityStatus;
     setUpdatingAvailability(true);
     
     const [hours, minutes] = availableAtTime.split(":").map(Number);
     const dateWithTime = new Date(availableAtDate);
     dateWithTime.setHours(hours, minutes, 0, 0);
+    const availableAt = dateWithTime.toISOString();
+    
+    // Get driver info for notification
+    const { data: driverInfo } = await supabase
+      .from("drivers")
+      .select("first_name, last_name, truck_number")
+      .eq("user_id", user.id)
+      .maybeSingle();
     
     const { error } = await supabase
       .from("drivers")
       .update({ 
         availability_status: "Not Available",
-        available_at: dateWithTime.toISOString()
+        available_at: availableAt
       })
       .eq("user_id", user.id);
     
@@ -154,6 +183,17 @@ export function DriverDashboard() {
         title: "Availability Updated",
         description: `You'll be available on ${format(dateWithTime, "MMM d")} at ${format(dateWithTime, "h:mm a")}`,
       });
+      
+      // Send notification to dispatchers
+      if (driverInfo) {
+        await sendDriverAvailabilityNotification({
+          driverName: `${driverInfo.first_name} ${driverInfo.last_name}`,
+          previousStatus,
+          newStatus: "Not Available",
+          availableAt,
+          truckNumber: driverInfo.truck_number,
+        });
+      }
     }
     
     setUpdatingAvailability(false);
