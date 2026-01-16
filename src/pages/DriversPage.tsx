@@ -60,6 +60,40 @@ export default function DriversPage() {
   useEffect(() => {
     if (user && userRole === "dispatcher") {
       fetchDrivers();
+
+      // Subscribe to realtime changes on drivers table
+      const channel = supabase
+        .channel('drivers-realtime')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'drivers',
+          },
+          (payload) => {
+            if (payload.eventType === 'INSERT') {
+              setDrivers((prev) => [...prev, payload.new as Driver].sort((a, b) => 
+                a.last_name.localeCompare(b.last_name)
+              ));
+            } else if (payload.eventType === 'UPDATE') {
+              setDrivers((prev) =>
+                prev.map((driver) =>
+                  driver.id === payload.new.id ? (payload.new as Driver) : driver
+                )
+              );
+            } else if (payload.eventType === 'DELETE') {
+              setDrivers((prev) =>
+                prev.filter((driver) => driver.id !== payload.old.id)
+              );
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [user, userRole]);
 
