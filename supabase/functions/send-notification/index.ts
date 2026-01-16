@@ -28,19 +28,31 @@ const loadDataSchema = z.object({
   eta: z.string().max(100, "ETA too long").optional().nullable(),
 });
 
+// Driver availability notification schema
+const driverDataSchema = z.object({
+  driverName: z.string().min(1, "Driver name required").max(200, "Driver name too long"),
+  previousStatus: z.string().max(50, "Previous status too long").optional(),
+  newStatus: z.string().min(1, "New status required").max(50, "New status too long"),
+  availableAt: z.string().max(100, "Available at too long").optional().nullable(),
+  truckNumber: z.string().max(50, "Truck number too long").optional().nullable(),
+});
+
 const notificationRequestSchema = z.object({
-  type: z.enum(['load_submitted', 'load_approved', 'status_in_transit', 'status_delivered', 'eta_updated'], {
+  type: z.enum(['load_submitted', 'load_approved', 'status_in_transit', 'status_delivered', 'eta_updated', 'driver_availability_changed'], {
     errorMap: () => ({ message: "Invalid notification type" })
   }),
-  recipientEmail: z.string().email("Invalid email format").max(255, "Email too long"),
+  recipientEmail: z.string().email("Invalid email format").max(255, "Email too long").optional(),
   recipientUserId: z.string().uuid("Invalid user ID format").optional(),
-  loadData: loadDataSchema,
+  loadData: loadDataSchema.optional(),
+  driverData: driverDataSchema.optional(),
   notifyDispatcher: z.boolean().optional(),
 });
 
 type NotificationRequest = z.infer<typeof notificationRequestSchema>;
+type LoadData = z.infer<typeof loadDataSchema>;
+type DriverData = z.infer<typeof driverDataSchema>;
 
-function getEmailContent(type: string, loadData: NotificationRequest["loadData"]) {
+function getEmailContent(type: string, loadData: LoadData) {
   const baseStyle = `
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     line-height: 1.6;
@@ -270,7 +282,74 @@ function getEmailContent(type: string, loadData: NotificationRequest["loadData"]
   }
 }
 
-function getDispatcherEmailContent(loadData: NotificationRequest["loadData"], clientEmail: string) {
+function getDriverAvailabilityEmailContent(driverData: DriverData) {
+  const baseStyle = `
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.6;
+  `;
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Available': return '#4caf50';
+      case 'Maintenance': return '#ff9800';
+      case 'Resetting 10 hours': 
+      case 'Resetting 34 hours': return '#ff9800';
+      case 'Not Available': return '#f44336';
+      default: return '#6c757d';
+    }
+  };
+
+  const formatAvailableAt = (dateStr: string) => {
+    return new Date(dateStr).toLocaleString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  const statusColor = getStatusColor(driverData.newStatus);
+
+  return {
+    subject: `🚛 Driver ${driverData.driverName} - Status: ${driverData.newStatus}`,
+    html: `
+      <div style="${baseStyle}">
+        <div style="background: linear-gradient(135deg, #002147 0%, #003366 100%); color: white; padding: 24px; text-align: center;">
+          <h1 style="margin: 0; font-size: 28px;">🚚 Road Runner Express</h1>
+        </div>
+        <div style="padding: 32px 24px; background: #ffffff;">
+          <h2 style="color: #002147; margin-top: 0;">Driver Availability Update</h2>
+          
+          <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #002147;">Driver Information</h3>
+            <p><strong>Driver:</strong> ${driverData.driverName}</p>
+            ${driverData.truckNumber ? `<p><strong>Truck #:</strong> ${driverData.truckNumber}</p>` : ''}
+            ${driverData.previousStatus ? `<p><strong>Previous Status:</strong> ${driverData.previousStatus}</p>` : ''}
+          </div>
+          
+          <div style="background: ${statusColor}; color: white; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
+            <p style="margin: 0; font-size: 14px; opacity: 0.9;">Current Status</p>
+            <p style="margin: 8px 0 0 0; font-size: 24px; font-weight: bold;">${driverData.newStatus}</p>
+            ${driverData.newStatus === 'Not Available' && driverData.availableAt ? `
+              <p style="margin: 12px 0 0 0; font-size: 14px; opacity: 0.9;">
+                Will be available: ${formatAvailableAt(driverData.availableAt)}
+              </p>
+            ` : ''}
+          </div>
+          
+          <p style="color: #6c757d; font-size: 14px;">This is an automated notification to keep dispatch informed of driver availability changes.</p>
+        </div>
+        <div style="background: #002147; color: white; padding: 16px; text-align: center;">
+          <p style="margin: 0;">Road Runner Express Dispatch System</p>
+        </div>
+      </div>
+    `,
+  };
+}
+
+function getDispatcherEmailContent(loadData: LoadData, clientEmail: string) {
   const baseStyle = `
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     line-height: 1.6;
@@ -319,12 +398,25 @@ function getInAppNotificationTitle(type: string): string {
       return "Shipment Delivered";
     case "eta_updated":
       return "ETA Updated";
+    case "driver_availability_changed":
+      return "Driver Availability Changed";
     default:
       return "Notification";
   }
 }
 
-function getInAppNotificationMessage(type: string, loadData: NotificationRequest["loadData"]): string {
+function getInAppNotificationMessage(type: string, loadData?: LoadData, driverData?: DriverData): string {
+  if (type === "driver_availability_changed" && driverData) {
+    const availableInfo = driverData.newStatus === "Not Available" && driverData.availableAt 
+      ? ` - Available ${new Date(driverData.availableAt).toLocaleString()}`
+      : '';
+    return `${driverData.driverName} is now ${driverData.newStatus}${availableInfo}`;
+  }
+
+  if (!loadData) {
+    return "You have a new notification.";
+  }
+
   const shortId = loadData.id.slice(0, 8);
   switch (type) {
     case "load_submitted":
@@ -478,7 +570,151 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { type, recipientEmail, recipientUserId, loadData, notifyDispatcher } = validationResult.data;
+    const { type, recipientEmail, recipientUserId, loadData, driverData, notifyDispatcher } = validationResult.data;
+
+    // Handle driver availability notifications
+    if (type === "driver_availability_changed") {
+      if (!driverData) {
+        return new Response(
+          JSON.stringify({ error: "Driver data is required for availability notifications" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      // Check if user is a driver
+      const { data: userRole } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .single();
+
+      if (userRole?.role !== "driver") {
+        console.error("User is not a driver:", user.id);
+        return new Response(
+          JSON.stringify({ error: "Only drivers can send availability notifications" }),
+          { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      console.log(`Processing driver availability notification for ${driverData.driverName}: ${driverData.newStatus}`);
+
+      // Fetch all dispatcher user IDs and notify them
+      const { data: dispatchers, error: dispatcherError } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "dispatcher");
+
+      if (dispatcherError) {
+        console.error("Error fetching dispatchers:", dispatcherError);
+      }
+
+      const notificationTitle = getInAppNotificationTitle(type);
+      const notificationMessage = getInAppNotificationMessage(type, undefined, driverData);
+
+      const notificationsToInsert: Array<{
+        user_id: string;
+        type: string;
+        title: string;
+        message: string;
+        load_id: null;
+        read: boolean;
+      }> = [];
+
+      const pushRecipients: string[] = [];
+
+      if (dispatchers && dispatchers.length > 0) {
+        for (const dispatcher of dispatchers) {
+          notificationsToInsert.push({
+            user_id: dispatcher.user_id,
+            type,
+            title: notificationTitle,
+            message: notificationMessage,
+            load_id: null,
+            read: false,
+          });
+          pushRecipients.push(dispatcher.user_id);
+        }
+        console.log(`Adding availability notifications for ${dispatchers.length} dispatchers`);
+      }
+
+      // Insert all in-app notifications
+      if (notificationsToInsert.length > 0) {
+        const { error: notifError } = await supabase.from("notifications").insert(notificationsToInsert);
+        
+        if (notifError) {
+          console.error("Error creating in-app notifications:", notifError);
+        } else {
+          console.log(`Created ${notificationsToInsert.length} in-app notifications successfully`);
+        }
+      }
+
+      // Send push notifications to all dispatchers
+      let totalPushSent = 0;
+      let totalPushFailed = 0;
+      
+      for (const userId of pushRecipients) {
+        const pushPayload = {
+          title: notificationTitle,
+          body: notificationMessage,
+        };
+        const { sent, failed } = await sendPushNotifications(supabase, userId, pushPayload);
+        totalPushSent += sent;
+        totalPushFailed += failed;
+      }
+
+      console.log(`Push notifications: ${totalPushSent} sent, ${totalPushFailed} failed`);
+
+      // Send email to dispatcher if configured
+      if (dispatcherEmail) {
+        const emailContent = getDriverAvailabilityEmailContent(driverData);
+        
+        const emailResponse = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${RESEND_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            from: "Road Runner Express <onboarding@resend.dev>",
+            to: [dispatcherEmail],
+            subject: emailContent.subject,
+            html: emailContent.html,
+          }),
+        });
+
+        const emailData = await emailResponse.json();
+
+        if (!emailResponse.ok) {
+          console.error("Error sending dispatcher email:", emailData);
+        } else {
+          console.log("Dispatcher email sent successfully:", emailData);
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: "Availability notification sent",
+          push: { sent: totalPushSent, failed: totalPushFailed }
+        }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Handle load-related notifications (existing logic)
+    if (!loadData) {
+      return new Response(
+        JSON.stringify({ error: "Load data is required for load notifications" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    if (!recipientEmail) {
+      return new Response(
+        JSON.stringify({ error: "Recipient email is required for load notifications" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
 
     // Verify user has permission to send notifications for this load
     const { data: load, error: loadError } = await supabase

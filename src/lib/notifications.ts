@@ -12,7 +12,15 @@ interface LoadData {
   eta?: string;
 }
 
-type NotificationType = "load_submitted" | "load_approved" | "status_in_transit" | "status_delivered" | "eta_updated";
+interface DriverAvailabilityData {
+  driverName: string;
+  previousStatus?: string;
+  newStatus: string;
+  availableAt?: string | null;
+  truckNumber?: string | null;
+}
+
+type NotificationType = "load_submitted" | "load_approved" | "status_in_transit" | "status_delivered" | "eta_updated" | "driver_availability_changed";
 
 export async function sendNotification(
   type: NotificationType,
@@ -41,6 +49,30 @@ export async function sendNotification(
     return { success: true };
   } catch (err: any) {
     console.error("Notification exception:", err);
+    return { success: false, error: err.message };
+  }
+}
+
+export async function sendDriverAvailabilityNotification(
+  driverData: DriverAvailabilityData
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { data, error } = await supabase.functions.invoke("send-notification", {
+      body: {
+        type: "driver_availability_changed",
+        driverData,
+      },
+    });
+
+    if (error) {
+      console.error("Availability notification error:", error);
+      return { success: false, error: error.message };
+    }
+
+    console.log("Availability notification sent:", data);
+    return { success: true };
+  } catch (err: any) {
+    console.error("Availability notification exception:", err);
     return { success: false, error: err.message };
   }
 }

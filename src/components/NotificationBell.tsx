@@ -108,6 +108,8 @@ export function NotificationBell() {
         return <Truck className="text-status-in-transit" size={16} />;
       case "status_delivered":
         return <CheckCircle className="text-status-delivered" size={16} />;
+      case "driver_availability_changed":
+        return <Clock className="text-accent" size={16} />;
       default:
         return <Bell className="text-muted-foreground" size={16} />;
     }
