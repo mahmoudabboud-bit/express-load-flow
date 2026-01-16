@@ -20,7 +20,7 @@ interface Load {
   id: string;
   origin_address: string;
   destination_address: string;
-  status: "Pending" | "Assigned" | "In-Transit" | "Delivered";
+  status: "Pending" | "Assigned" | "Arrived" | "Loaded" | "In-Transit" | "Delivered";
   trailer_type: string;
   weight_lbs: number;
   pickup_date: string;
@@ -66,14 +66,16 @@ export function DriverDashboard() {
       console.error("Error fetching loads:", error);
     } else {
       const loads = (data as Load[]) || [];
-      const active = loads.find(l => l.status === "Assigned" || l.status === "In-Transit");
+      const active = loads.find(l => 
+        l.status === "Assigned" || l.status === "Arrived" || l.status === "Loaded" || l.status === "In-Transit"
+      );
       setCurrentLoad(active || null);
       setCompletedLoads(loads.filter(l => l.status === "Delivered"));
     }
     setLoading(false);
   };
 
-  const handleStatusUpdate = async (newStatus: "In-Transit" | "Delivered", signatureDataUrl?: string) => {
+  const handleStatusUpdate = async (newStatus: "Arrived" | "Loaded" | "In-Transit" | "Delivered", signatureDataUrl?: string) => {
     if (!currentLoad) return;
     
     setUpdating(true);
@@ -82,7 +84,11 @@ export function DriverDashboard() {
       status: newStatus,
     };
 
-    if (newStatus === "In-Transit") {
+    if (newStatus === "Arrived") {
+      updateData.arrived_at = new Date().toISOString();
+    } else if (newStatus === "Loaded") {
+      updateData.loaded_at = new Date().toISOString();
+    } else if (newStatus === "In-Transit") {
       updateData.in_transit_at = new Date().toISOString();
     } else if (newStatus === "Delivered") {
       updateData.delivered_at = new Date().toISOString();
@@ -313,11 +319,37 @@ export function DriverDashboard() {
                 variant="driver-action"
                 size="xl"
                 className="w-full py-6 text-lg"
+                onClick={() => handleStatusUpdate("Arrived")}
+                disabled={updating}
+              >
+                <MapPin className="mr-3" size={24} />
+                Arrived
+              </Button>
+            )}
+
+            {currentLoad.status === "Arrived" && (
+              <Button
+                variant="driver-action"
+                size="xl"
+                className="w-full py-6 text-lg"
+                onClick={() => handleStatusUpdate("Loaded")}
+                disabled={updating}
+              >
+                <Package className="mr-3" size={24} />
+                Loaded
+              </Button>
+            )}
+
+            {currentLoad.status === "Loaded" && (
+              <Button
+                variant="driver-action"
+                size="xl"
+                className="w-full py-6 text-lg"
                 onClick={() => handleStatusUpdate("In-Transit")}
                 disabled={updating}
               >
                 <Truck className="mr-3" size={24} />
-                Mark as Picked Up
+                In Transit
               </Button>
             )}
 
