@@ -95,6 +95,38 @@ export default function LoadQueuePage() {
       fetchLoads();
       fetchDrivers();
       fetchClients();
+
+      // Subscribe to realtime changes on loads table
+      const channel = supabase
+        .channel('loads-realtime')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'loads',
+          },
+          (payload) => {
+            if (payload.eventType === 'INSERT') {
+              setLoads((prev) => [payload.new as Load, ...prev]);
+            } else if (payload.eventType === 'UPDATE') {
+              setLoads((prev) =>
+                prev.map((load) =>
+                  load.id === payload.new.id ? (payload.new as Load) : load
+                )
+              );
+            } else if (payload.eventType === 'DELETE') {
+              setLoads((prev) =>
+                prev.filter((load) => load.id !== payload.old.id)
+              );
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [user, userRole]);
 
