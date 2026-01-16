@@ -31,7 +31,7 @@ interface Load {
   id: string;
   origin_address: string;
   destination_address: string;
-  status: "Pending" | "Assigned" | "In-Transit" | "Delivered";
+  status: "Pending" | "Assigned" | "Arrived" | "Loaded" | "In-Transit" | "Arrived at Delivery" | "Delivered";
   trailer_type: string;
   weight_lbs: number;
   pickup_date: string;
@@ -115,7 +115,7 @@ export default function LoadQueuePage() {
     const { data: activeCounts } = await supabase
       .from("loads")
       .select("driver_id")
-      .in("status", ["Assigned", "In-Transit"]);
+      .in("status", ["Assigned", "Arrived", "Loaded", "In-Transit", "Arrived at Delivery"]);
 
     // Count loads per driver
     const loadCountMap: Record<string, number> = {};
@@ -382,7 +382,10 @@ export default function LoadQueuePage() {
               <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="Pending">Pending</SelectItem>
               <SelectItem value="Assigned">Assigned</SelectItem>
+              <SelectItem value="Arrived">Arrived</SelectItem>
+              <SelectItem value="Loaded">Loaded</SelectItem>
               <SelectItem value="In-Transit">In Transit</SelectItem>
+              <SelectItem value="Arrived at Delivery">Arrived at Delivery</SelectItem>
               <SelectItem value="Delivered">Delivered</SelectItem>
             </SelectContent>
           </Select>
@@ -491,7 +494,7 @@ export default function LoadQueuePage() {
                             </Button>
                           </div>
                         )}
-                        {(load.status === "In-Transit" || load.status === "Delivered") && (
+                        {(load.status === "Arrived" || load.status === "Loaded" || load.status === "In-Transit" || load.status === "Arrived at Delivery" || load.status === "Delivered") && (
                           <Button
                             variant="outline"
                             size="sm"
