@@ -66,6 +66,46 @@ export function DriverDashboard() {
     if (user) {
       fetchLoads();
       fetchAvailability();
+
+      // Subscribe to realtime changes on loads table for this driver
+      const channel = supabase
+        .channel('driver-loads-realtime')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'loads',
+            filter: `driver_id=eq.${user.id}`,
+          },
+          (payload) => {
+            if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+              const updatedLoad = payload.new as Load;
+              const activeStatuses = ["Assigned", "Arrived", "Loaded", "In-Transit", "Arrived at Delivery"];
+              
+              if (activeStatuses.includes(updatedLoad.status)) {
+                setCurrentLoad(updatedLoad);
+              } else if (updatedLoad.status === "Delivered") {
+                setCurrentLoad(null);
+                setCompletedLoads((prev) => {
+                  const exists = prev.some(l => l.id === updatedLoad.id);
+                  if (exists) {
+                    return prev.map(l => l.id === updatedLoad.id ? updatedLoad : l);
+                  }
+                  return [updatedLoad, ...prev];
+                });
+              }
+            } else if (payload.eventType === 'DELETE') {
+              setCurrentLoad((prev) => prev?.id === payload.old.id ? null : prev);
+              setCompletedLoads((prev) => prev.filter((load) => load.id !== payload.old.id));
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [user]);
 
