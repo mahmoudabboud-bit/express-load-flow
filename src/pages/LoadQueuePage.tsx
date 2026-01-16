@@ -97,7 +97,7 @@ export default function LoadQueuePage() {
       fetchClients();
 
       // Subscribe to realtime changes on loads table
-      const channel = supabase
+      const loadsChannel = supabase
         .channel('loads-realtime')
         .on(
           'postgres_changes',
@@ -124,8 +124,25 @@ export default function LoadQueuePage() {
         )
         .subscribe();
 
+      // Subscribe to realtime changes on drivers table
+      const driversChannel = supabase
+        .channel('drivers-realtime-queue')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'drivers',
+          },
+          () => {
+            fetchDrivers();
+          }
+        )
+        .subscribe();
+
       return () => {
-        supabase.removeChannel(channel);
+        supabase.removeChannel(loadsChannel);
+        supabase.removeChannel(driversChannel);
       };
     }
   }, [user, userRole]);
