@@ -20,7 +20,7 @@ interface Load {
   id: string;
   origin_address: string;
   destination_address: string;
-  status: "Pending" | "Assigned" | "Arrived" | "Loaded" | "In-Transit" | "Delivered";
+  status: "Pending" | "Assigned" | "Arrived" | "Loaded" | "In-Transit" | "Arrived at Delivery" | "Delivered";
   trailer_type: string;
   weight_lbs: number;
   pickup_date: string;
@@ -67,7 +67,7 @@ export function DriverDashboard() {
     } else {
       const loads = (data as Load[]) || [];
       const active = loads.find(l => 
-        l.status === "Assigned" || l.status === "Arrived" || l.status === "Loaded" || l.status === "In-Transit"
+        l.status === "Assigned" || l.status === "Arrived" || l.status === "Loaded" || l.status === "In-Transit" || l.status === "Arrived at Delivery"
       );
       setCurrentLoad(active || null);
       setCompletedLoads(loads.filter(l => l.status === "Delivered"));
@@ -75,7 +75,7 @@ export function DriverDashboard() {
     setLoading(false);
   };
 
-  const handleStatusUpdate = async (newStatus: "Arrived" | "Loaded" | "In-Transit" | "Delivered", signatureDataUrl?: string) => {
+  const handleStatusUpdate = async (newStatus: "Arrived" | "Loaded" | "In-Transit" | "Arrived at Delivery" | "Delivered", signatureDataUrl?: string) => {
     if (!currentLoad) return;
     
     setUpdating(true);
@@ -90,6 +90,8 @@ export function DriverDashboard() {
       updateData.loaded_at = new Date().toISOString();
     } else if (newStatus === "In-Transit") {
       updateData.in_transit_at = new Date().toISOString();
+    } else if (newStatus === "Arrived at Delivery") {
+      updateData.arrived_at_delivery_at = new Date().toISOString();
     } else if (newStatus === "Delivered") {
       updateData.delivered_at = new Date().toISOString();
       
@@ -354,6 +356,19 @@ export function DriverDashboard() {
             )}
 
               {currentLoad.status === "In-Transit" && (
+                <Button
+                  variant="driver-action"
+                  size="xl"
+                  className="w-full py-6 text-lg"
+                  onClick={() => handleStatusUpdate("Arrived at Delivery")}
+                  disabled={updating}
+                >
+                  <MapPin className="mr-3" size={24} />
+                  Arrived at Drop Off
+                </Button>
+              )}
+
+              {currentLoad.status === "Arrived at Delivery" && (
                 <Button
                   variant="driver-action"
                   size="xl"
