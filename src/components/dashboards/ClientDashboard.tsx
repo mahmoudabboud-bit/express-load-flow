@@ -13,7 +13,7 @@ import { SignatureCapture } from "@/components/SignatureCapture";
 import { ShipmentTimeline } from "@/components/ShipmentTimeline";
 import { generateDeliveryReceipt } from "@/lib/pdf-generator";
 import { useToast } from "@/hooks/use-toast";
-import { Package, Truck, Clock, CheckCircle, Plus, ArrowRight, Pencil, MapPin, Weight, Calendar, Loader2, FileCheck, PenTool, Eye, DollarSign, User, Download, Settings } from "lucide-react";
+import { Package, Truck, Clock, CheckCircle, Plus, ArrowRight, Pencil, MapPin, Weight, Calendar, Loader2, FileCheck, PenTool, Eye, DollarSign, User, Download, Settings, CreditCard } from "lucide-react";
 
 interface Load {
   id: string;
@@ -34,6 +34,9 @@ interface Load {
   in_transit_at: string | null;
   arrived_at_delivery_at: string | null;
   delivered_at: string | null;
+  payment_required: boolean;
+  payment_status: "not_required" | "pending" | "paid" | "failed";
+  paid_at: string | null;
 }
 
 const trailerTypes = ["Flat Bed", "Step Deck", "Minifloat", "1Ton"] as const;
@@ -54,12 +57,74 @@ export function ClientDashboard() {
     pickup_date: "",
   });
   const [saving, setSaving] = useState(false);
+  const [processingPayment, setProcessingPayment] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
       fetchLoads();
+
+      // Subscribe to realtime changes on loads table for this client
+      const channel = supabase
+        .channel('client-dashboard-loads')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'loads',
+            filter: `client_id=eq.${user.id}`,
+          },
+          (payload) => {
+            if (payload.eventType === 'INSERT') {
+              setLoads((prev) => [payload.new as Load, ...prev].slice(0, 5));
+            } else if (payload.eventType === 'UPDATE') {
+              setLoads((prev) =>
+                prev.map((load) =>
+                  load.id === payload.new.id ? (payload.new as Load) : load
+                )
+              );
+            } else if (payload.eventType === 'DELETE') {
+              setLoads((prev) =>
+                prev.filter((load) => load.id !== payload.old.id)
+              );
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [user]);
+
+  const handlePayNow = async (load: Load) => {
+    setProcessingPayment(load.id);
+    try {
+      const { data: sessionData, error } = await supabase.functions.invoke("create-payment-session", {
+        body: { load_id: load.id },
+      });
+
+      if (error) {
+        throw new Error(error.message || "Failed to create payment session");
+      }
+
+      if (sessionData?.url) {
+        window.location.href = sessionData.url;
+      } else {
+        throw new Error("No checkout URL received");
+      }
+    } catch (error) {
+      console.error("Payment error:", error);
+      toast({
+        variant: "destructive",
+        title: "Payment Failed",
+        description: error instanceof Error ? error.message : "Failed to initiate payment",
+      });
+    } finally {
+      setProcessingPayment(null);
+    }
+  };
 
   const fetchLoads = async () => {
     const { data, error } = await supabase
@@ -238,6 +303,64 @@ export function ClientDashboard() {
         </Card>
       </div>
 
+      {/* Pending Payments Section */}
+      {loads.filter(l => l.payment_required && (l.payment_status === "pending" || l.payment_status === "failed")).length > 0 && (
+        <Card className="card-elevated border-yellow-500/30 bg-yellow-500/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-yellow-700">
+              <CreditCard size={20} />
+              Pending Payments
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {loads
+                .filter(l => l.payment_required && (l.payment_status === "pending" || l.payment_status === "failed"))
+                .map((load) => (
+                  <div
+                    key={load.id}
+                    className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-background rounded-xl border border-yellow-500/20 gap-4"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <StatusBadge status={load.status} />
+                        {load.payment_status === "failed" && (
+                          <span className="text-xs bg-red-500/20 text-red-700 px-2 py-1 rounded">
+                            Payment Failed
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-sm">
+                        <span className="font-medium">{load.origin_address}</span>
+                        <span className="text-muted-foreground mx-2">→</span>
+                        <span className="font-medium">{load.destination_address}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-xl font-bold text-foreground">
+                        ${((load.price_cents || 0) / 100).toFixed(2)}
+                      </div>
+                      <Button
+                        variant="accent"
+                        size="sm"
+                        onClick={() => handlePayNow(load)}
+                        disabled={processingPayment === load.id}
+                      >
+                        {processingPayment === load.id ? (
+                          <Loader2 size={14} className="mr-1 animate-spin" />
+                        ) : (
+                          <CreditCard size={14} className="mr-1" />
+                        )}
+                        Pay Now
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Recent Shipments */}
       <Card className="card-elevated">
         <CardHeader className="flex flex-row items-center justify-between">
@@ -268,11 +391,24 @@ export function ClientDashboard() {
                   className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-secondary/30 rounded-xl gap-4"
                 >
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
                       <StatusBadge status={load.status} />
                       <span className="text-xs text-muted-foreground">
                         {load.trailer_type}
                       </span>
+                      {/* Payment Status Badges */}
+                      {load.payment_required && load.payment_status === "pending" && (
+                        <span className="text-xs bg-yellow-500/20 text-yellow-700 px-2 py-1 rounded flex items-center gap-1">
+                          <CreditCard size={10} />
+                          Payment Due
+                        </span>
+                      )}
+                      {load.payment_status === "paid" && (
+                        <span className="text-xs bg-green-500/20 text-green-700 px-2 py-1 rounded flex items-center gap-1">
+                          <CreditCard size={10} />
+                          Paid
+                        </span>
+                      )}
                     </div>
                     <div className="text-sm">
                       <span className="font-medium">{load.origin_address}</span>
@@ -293,6 +429,24 @@ export function ClientDashboard() {
                       </div>
                     )}
                     <div>{new Date(load.pickup_date).toLocaleDateString()}</div>
+                    
+                    {/* Pay button for pending payments */}
+                    {load.payment_required && (load.payment_status === "pending" || load.payment_status === "failed") && (
+                      <Button
+                        variant="accent"
+                        size="sm"
+                        onClick={() => handlePayNow(load)}
+                        disabled={processingPayment === load.id}
+                      >
+                        {processingPayment === load.id ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <CreditCard size={14} className="mr-1" />
+                        )}
+                        Pay
+                      </Button>
+                    )}
+                    
                     {load.status === "Pending" && (
                       <Button
                         variant="outline"
