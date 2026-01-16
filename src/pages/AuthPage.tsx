@@ -26,9 +26,11 @@ export default function AuthPage() {
   const [lastName, setLastName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [address, setAddress] = useState("");
+  const [truckType, setTruckType] = useState("Flat Bed");
+  const [truckNumber, setTruckNumber] = useState("");
   const [role, setRole] = useState<UserRole>("client");
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string; fullName?: string; firstName?: string; lastName?: string; phoneNumber?: string; address?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string; password?: string; fullName?: string; firstName?: string; lastName?: string; phoneNumber?: string; address?: string; truckNumber?: string }>();
 
   const { signIn, signUp, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -60,8 +62,13 @@ export default function AuthPage() {
         if (!lastName.trim()) newErrors.lastName = "Please enter your last name";
         if (!phoneNumber.trim()) newErrors.phoneNumber = "Please enter your phone number";
         if (!address.trim()) newErrors.address = "Please enter your address";
+      } else if (role === "driver") {
+        // Driver role requires name and truck info
+        if (!firstName.trim()) newErrors.firstName = "Please enter your first name";
+        if (!lastName.trim()) newErrors.lastName = "Please enter your last name";
+        if (!truckNumber.trim()) newErrors.truckNumber = "Please enter your truck number";
       } else {
-        // Other roles just need full name
+        // Dispatcher just needs full name
         if (!fullName.trim()) newErrors.fullName = "Please enter your full name";
       }
     }
@@ -96,7 +103,7 @@ export default function AuthPage() {
           navigate("/dashboard");
         }
       } else {
-        // For clients, pass client-specific data; for others, use fullName
+        // For clients, pass client-specific data; for drivers, pass driver data; for others, use fullName
         const clientData = role === "client" ? {
           firstName,
           lastName,
@@ -104,8 +111,15 @@ export default function AuthPage() {
           address,
         } : undefined;
         
-        const displayName = role === "client" ? `${firstName} ${lastName}` : fullName;
-        const { error } = await signUp(email, password, role, displayName, clientData);
+        const driverData = role === "driver" ? {
+          firstName,
+          lastName,
+          truckType,
+          truckNumber,
+        } : undefined;
+        
+        const displayName = role === "client" || role === "driver" ? `${firstName} ${lastName}` : fullName;
+        const { error } = await signUp(email, password, role, displayName, clientData, driverData);
         if (error) {
           const errorMessage = error.message.includes("already registered")
             ? "This email is already registered. Please sign in instead."
@@ -270,7 +284,70 @@ export default function AuthPage() {
                   </>
                 )}
 
-                {mode === "signup" && role !== "client" && (
+                {mode === "signup" && role === "driver" && (
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="driverFirstName">First Name</Label>
+                        <Input
+                          id="driverFirstName"
+                          type="text"
+                          placeholder="John"
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                          className={errors?.firstName ? "border-destructive" : ""}
+                        />
+                        {errors?.firstName && (
+                          <p className="text-sm text-destructive">{errors.firstName}</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="driverLastName">Last Name</Label>
+                        <Input
+                          id="driverLastName"
+                          type="text"
+                          placeholder="Doe"
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                          className={errors?.lastName ? "border-destructive" : ""}
+                        />
+                        {errors?.lastName && (
+                          <p className="text-sm text-destructive">{errors.lastName}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="truckType">Truck Type</Label>
+                      <Select value={truckType} onValueChange={setTruckType}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select truck type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Flat Bed">Flat Bed</SelectItem>
+                          <SelectItem value="Step Deck">Step Deck</SelectItem>
+                          <SelectItem value="Minifloat">Minifloat</SelectItem>
+                          <SelectItem value="1Ton">1Ton</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="truckNumber">Truck Number</Label>
+                      <Input
+                        id="truckNumber"
+                        type="text"
+                        placeholder="TRK-001"
+                        value={truckNumber}
+                        onChange={(e) => setTruckNumber(e.target.value)}
+                        className={errors?.truckNumber ? "border-destructive" : ""}
+                      />
+                      {errors?.truckNumber && (
+                        <p className="text-sm text-destructive">{errors.truckNumber}</p>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {mode === "signup" && role === "dispatcher" && (
                   <div className="space-y-2">
                     <Label htmlFor="fullName">Full Name</Label>
                     <Input
@@ -279,9 +356,9 @@ export default function AuthPage() {
                       placeholder="John Doe"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      className={errors.fullName ? "border-destructive" : ""}
+                      className={errors?.fullName ? "border-destructive" : ""}
                     />
-                    {errors.fullName && (
+                    {errors?.fullName && (
                       <p className="text-sm text-destructive">{errors.fullName}</p>
                     )}
                   </div>

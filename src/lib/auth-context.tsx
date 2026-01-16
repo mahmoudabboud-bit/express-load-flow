@@ -10,7 +10,7 @@ interface AuthContextType {
   userRole: UserRole | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, role: UserRole, fullName: string, clientData?: { firstName: string; lastName: string; phoneNumber: string; address: string }) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, role: UserRole, fullName: string, clientData?: { firstName: string; lastName: string; phoneNumber: string; address: string }, driverData?: { firstName: string; lastName: string; truckType: string; truckNumber: string }) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -78,10 +78,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error };
   };
 
-  const signUp = async (email: string, password: string, role: UserRole, fullName: string, clientData?: { firstName: string; lastName: string; phoneNumber: string; address: string }) => {
+  const signUp = async (email: string, password: string, role: UserRole, fullName: string, clientData?: { firstName: string; lastName: string; phoneNumber: string; address: string }, driverData?: { firstName: string; lastName: string; truckType: string; truckNumber: string }) => {
     const redirectUrl = `${window.location.origin}/`;
     
-    // Build user metadata - include client-specific fields for the trigger
+    // Build user metadata - include role-specific fields for the trigger
     const metadata: Record<string, string> = {
       full_name: fullName,
       role: role,
@@ -92,6 +92,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       metadata.last_name = clientData.lastName;
       metadata.phone_number = clientData.phoneNumber;
       metadata.address = clientData.address;
+    }
+    
+    if (role === 'driver' && driverData) {
+      metadata.first_name = driverData.firstName;
+      metadata.last_name = driverData.lastName;
+      metadata.truck_type = driverData.truckType;
+      metadata.truck_number = driverData.truckNumber;
     }
     
     const { data, error } = await supabase.auth.signUp({
