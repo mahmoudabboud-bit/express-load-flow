@@ -29,7 +29,7 @@ interface Driver {
   available_at: string | null;
 }
 
-const TRUCK_TYPES = ["Flatbed", "Dry Van", "Reefer", "Tanker", "Lowboy", "Step Deck", "Hotshot"];
+const TRUCK_TYPES = ["Flat Bed", "Step Deck", "Minifloat", "1Ton"];
 const AVAILABILITY_STATUSES: AvailabilityStatus[] = ["Available", "Maintenance", "Resetting 10 hours", "Resetting 34 hours", "Not Available"];
 
 export default function DriversPage() {
