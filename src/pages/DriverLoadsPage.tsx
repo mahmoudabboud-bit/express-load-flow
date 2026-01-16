@@ -34,7 +34,7 @@ interface Load {
   id: string;
   origin_address: string;
   destination_address: string;
-  status: "Pending" | "Assigned" | "In-Transit" | "Delivered";
+  status: "Pending" | "Assigned" | "Arrived" | "Loaded" | "In-Transit" | "Arrived at Delivery" | "Delivered";
   trailer_type: string;
   weight_lbs: number;
   pickup_date: string;
@@ -90,7 +90,7 @@ export default function DriverLoadsPage() {
     setLoading(false);
   };
 
-  const handleStatusUpdate = async (load: Load, newStatus: "In-Transit" | "Delivered", signatureDataUrl?: string) => {
+  const handleStatusUpdate = async (load: Load, newStatus: "Arrived" | "Loaded" | "In-Transit" | "Arrived at Delivery" | "Delivered", signatureDataUrl?: string) => {
     setUpdating(load.id);
 
     const updateData: Record<string, unknown> = {
@@ -98,8 +98,14 @@ export default function DriverLoadsPage() {
     };
 
     // Set the appropriate timestamp
-    if (newStatus === "In-Transit") {
+    if (newStatus === "Arrived") {
+      updateData.arrived_at = new Date().toISOString();
+    } else if (newStatus === "Loaded") {
+      updateData.loaded_at = new Date().toISOString();
+    } else if (newStatus === "In-Transit") {
       updateData.in_transit_at = new Date().toISOString();
+    } else if (newStatus === "Arrived at Delivery") {
+      updateData.arrived_at_delivery_at = new Date().toISOString();
     } else if (newStatus === "Delivered") {
       updateData.delivered_at = new Date().toISOString();
       
@@ -360,6 +366,44 @@ export default function DriverLoadsPage() {
                             variant="accent"
                             size="lg"
                             className="w-full"
+                            onClick={() => handleStatusUpdate(load, "Arrived")}
+                            disabled={updating === load.id}
+                          >
+                            {updating === load.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <>
+                                <MapPin className="mr-2" size={18} />
+                                Arrived
+                              </>
+                            )}
+                          </Button>
+                        )}
+
+                        {load.status === "Arrived" && (
+                          <Button
+                            variant="accent"
+                            size="lg"
+                            className="w-full"
+                            onClick={() => handleStatusUpdate(load, "Loaded")}
+                            disabled={updating === load.id}
+                          >
+                            {updating === load.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <>
+                                <Package className="mr-2" size={18} />
+                                Loaded
+                              </>
+                            )}
+                          </Button>
+                        )}
+
+                        {load.status === "Loaded" && (
+                          <Button
+                            variant="accent"
+                            size="lg"
+                            className="w-full"
                             onClick={() => handleStatusUpdate(load, "In-Transit")}
                             disabled={updating === load.id}
                           >
@@ -368,13 +412,32 @@ export default function DriverLoadsPage() {
                             ) : (
                               <>
                                 <Truck className="mr-2" size={18} />
-                                Mark as Picked Up
+                                In Transit
                               </>
                             )}
                           </Button>
                         )}
 
                         {load.status === "In-Transit" && (
+                          <Button
+                            variant="accent"
+                            size="lg"
+                            className="w-full"
+                            onClick={() => handleStatusUpdate(load, "Arrived at Delivery")}
+                            disabled={updating === load.id}
+                          >
+                            {updating === load.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <>
+                                <MapPin className="mr-2" size={18} />
+                                Arrived at Drop Off
+                              </>
+                            )}
+                          </Button>
+                        )}
+
+                        {load.status === "Arrived at Delivery" && (
                           <Button
                             variant="accent"
                             size="lg"
