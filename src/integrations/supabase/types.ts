@@ -94,6 +94,7 @@ export type Database = {
       }
       loads: {
         Row: {
+          arrived_at: string | null
           assigned_at: string | null
           bol_image_url: string | null
           client_id: string
@@ -109,6 +110,7 @@ export type Database = {
           eta: string | null
           id: string
           in_transit_at: string | null
+          loaded_at: string | null
           origin_address: string
           pickup_date: string
           pickup_time: string | null
@@ -120,6 +122,7 @@ export type Database = {
           weight_lbs: number
         }
         Insert: {
+          arrived_at?: string | null
           assigned_at?: string | null
           bol_image_url?: string | null
           client_id: string
@@ -135,6 +138,7 @@ export type Database = {
           eta?: string | null
           id?: string
           in_transit_at?: string | null
+          loaded_at?: string | null
           origin_address: string
           pickup_date: string
           pickup_time?: string | null
@@ -146,6 +150,7 @@ export type Database = {
           weight_lbs: number
         }
         Update: {
+          arrived_at?: string | null
           assigned_at?: string | null
           bol_image_url?: string | null
           client_id?: string
@@ -161,6 +166,7 @@ export type Database = {
           eta?: string | null
           id?: string
           in_transit_at?: string | null
+          loaded_at?: string | null
           origin_address?: string
           pickup_date?: string
           pickup_time?: string | null
