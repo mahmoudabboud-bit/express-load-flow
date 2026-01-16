@@ -56,6 +56,8 @@ export type Database = {
       drivers: {
         Row: {
           active: boolean
+          availability_status: string
+          available_at: string | null
           created_at: string
           email: string
           first_name: string
@@ -68,6 +70,8 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          availability_status?: string
+          available_at?: string | null
           created_at?: string
           email: string
           first_name: string
@@ -80,6 +84,8 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          availability_status?: string
+          available_at?: string | null
           created_at?: string
           email?: string
           first_name?: string

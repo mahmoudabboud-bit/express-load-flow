@@ -10,8 +10,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Loader2, Plus, Pencil, Trash2, Users, Truck, Mail, Send } from "lucide-react";
+import { ArrowLeft, Loader2, Plus, Pencil, Trash2, Users, Truck, Mail, Send, Clock, AlertCircle, CheckCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+
+type AvailabilityStatus = "Available" | "Maintenance" | "Resetting 10 hours" | "Resetting 34 hours" | "Not Available";
 
 interface Driver {
   id: string;
@@ -23,9 +25,12 @@ interface Driver {
   email: string;
   active: boolean;
   created_at: string;
+  availability_status: AvailabilityStatus;
+  available_at: string | null;
 }
 
 const TRUCK_TYPES = ["Flatbed", "Dry Van", "Reefer", "Tanker", "Lowboy", "Step Deck", "Hotshot"];
+const AVAILABILITY_STATUSES: AvailabilityStatus[] = ["Available", "Maintenance", "Resetting 10 hours", "Resetting 34 hours", "Not Available"];
 
 export default function DriversPage() {
   const { user, userRole, loading: authLoading } = useAuth();
@@ -67,7 +72,7 @@ export default function DriversPage() {
     if (error) {
       console.error("Error fetching drivers:", error);
     } else {
-      setDrivers(data || []);
+      setDrivers((data as Driver[]) || []);
     }
     setLoading(false);
   };
@@ -320,6 +325,28 @@ export default function DriversPage() {
                           <Badge variant={driver.active ? "default" : "secondary"}>
                             {driver.active ? "Active" : "Inactive"}
                           </Badge>
+                          {/* Availability Status Badge */}
+                          <Badge 
+                            variant="outline" 
+                            className={
+                              driver.availability_status === "Available" 
+                                ? "border-green-500 text-green-600 bg-green-500/10" 
+                                : driver.availability_status === "Maintenance" 
+                                  ? "border-yellow-500 text-yellow-600 bg-yellow-500/10"
+                                  : driver.availability_status === "Not Available"
+                                    ? "border-red-500 text-red-600 bg-red-500/10"
+                                    : "border-orange-500 text-orange-600 bg-orange-500/10"
+                            }
+                          >
+                            {driver.availability_status === "Available" ? (
+                              <CheckCircle size={12} className="mr-1" />
+                            ) : driver.availability_status === "Maintenance" ? (
+                              <AlertCircle size={12} className="mr-1" />
+                            ) : (
+                              <Clock size={12} className="mr-1" />
+                            )}
+                            {driver.availability_status}
+                          </Badge>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
                           <div className="flex items-center gap-2 text-muted-foreground">
@@ -334,6 +361,20 @@ export default function DriversPage() {
                             Truck #: <span className="text-foreground font-medium">{driver.truck_number}</span>
                           </div>
                         </div>
+                        {/* Show available_at for Not Available status */}
+                        {driver.availability_status === "Not Available" && driver.available_at && (
+                          <div className="mt-2 text-sm text-muted-foreground flex items-center gap-2">
+                            <Clock size={14} />
+                            Available at: <span className="text-foreground font-medium">
+                              {new Date(driver.available_at).toLocaleString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                hour: "numeric",
+                                minute: "2-digit",
+                              })}
+                            </span>
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
                         <Button 

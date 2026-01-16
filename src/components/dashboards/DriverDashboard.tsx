@@ -6,15 +6,28 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/StatusBadge";
 import { SignatureCapture } from "@/components/SignatureCapture";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Input } from "@/components/ui/input";
+import { format } from "date-fns";
 import { 
   Truck, 
   MapPin, 
   Navigation, 
   Package,
   CheckCircle,
-  Clock
+  Clock,
+  CalendarIcon,
+  AlertCircle,
+  Wrench
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+type AvailabilityStatus = "Available" | "Maintenance" | "Resetting 10 hours" | "Resetting 34 hours" | "Not Available";
+
+const AVAILABILITY_STATUSES: AvailabilityStatus[] = ["Available", "Maintenance", "Resetting 10 hours", "Resetting 34 hours", "Not Available"];
 
 interface Load {
   id: string;
@@ -42,12 +55,109 @@ export function DriverDashboard() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [showSignature, setShowSignature] = useState(false);
+  
+  // Availability state
+  const [availabilityStatus, setAvailabilityStatus] = useState<AvailabilityStatus>("Available");
+  const [availableAtDate, setAvailableAtDate] = useState<Date | undefined>(undefined);
+  const [availableAtTime, setAvailableAtTime] = useState("08:00");
+  const [updatingAvailability, setUpdatingAvailability] = useState(false);
 
   useEffect(() => {
     if (user) {
       fetchLoads();
+      fetchAvailability();
     }
   }, [user]);
+
+  const fetchAvailability = async () => {
+    if (!user?.id) return;
+    
+    const { data, error } = await supabase
+      .from("drivers")
+      .select("availability_status, available_at")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    
+    if (data) {
+      setAvailabilityStatus((data.availability_status as AvailabilityStatus) || "Available");
+      if (data.available_at) {
+        const date = new Date(data.available_at);
+        setAvailableAtDate(date);
+        setAvailableAtTime(format(date, "HH:mm"));
+      }
+    }
+  };
+
+  const handleAvailabilityUpdate = async (newStatus: AvailabilityStatus) => {
+    if (!user?.id) return;
+    
+    setUpdatingAvailability(true);
+    setAvailabilityStatus(newStatus);
+    
+    let availableAt: string | null = null;
+    if (newStatus === "Not Available" && availableAtDate) {
+      const [hours, minutes] = availableAtTime.split(":").map(Number);
+      const dateWithTime = new Date(availableAtDate);
+      dateWithTime.setHours(hours, minutes, 0, 0);
+      availableAt = dateWithTime.toISOString();
+    }
+    
+    const { error } = await supabase
+      .from("drivers")
+      .update({ 
+        availability_status: newStatus,
+        available_at: availableAt
+      })
+      .eq("user_id", user.id);
+    
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Update failed",
+        description: "Could not update availability status.",
+      });
+    } else {
+      toast({
+        title: "Status Updated",
+        description: `Your availability is now: ${newStatus}`,
+      });
+    }
+    
+    setUpdatingAvailability(false);
+  };
+
+  const handleAvailableAtSave = async () => {
+    if (!user?.id || !availableAtDate) return;
+    
+    setUpdatingAvailability(true);
+    
+    const [hours, minutes] = availableAtTime.split(":").map(Number);
+    const dateWithTime = new Date(availableAtDate);
+    dateWithTime.setHours(hours, minutes, 0, 0);
+    
+    const { error } = await supabase
+      .from("drivers")
+      .update({ 
+        availability_status: "Not Available",
+        available_at: dateWithTime.toISOString()
+      })
+      .eq("user_id", user.id);
+    
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Update failed",
+        description: "Could not update availability.",
+      });
+    } else {
+      toast({
+        title: "Availability Updated",
+        description: `You'll be available on ${format(dateWithTime, "MMM d")} at ${format(dateWithTime, "h:mm a")}`,
+      });
+    }
+    
+    setUpdatingAvailability(false);
+  };
 
   const fetchLoads = async () => {
     if (!user?.id) {
@@ -211,6 +321,93 @@ export function DriverDashboard() {
         <h1 className="text-2xl font-bold text-foreground">My Current Load</h1>
         <p className="text-muted-foreground">Manage your assigned deliveries</p>
       </div>
+
+      {/* Availability Section */}
+      <Card className="card-elevated">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Clock size={20} className="text-accent" />
+            My Availability
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Current Status</Label>
+            <Select 
+              value={availabilityStatus} 
+              onValueChange={(value) => handleAvailabilityUpdate(value as AvailabilityStatus)}
+              disabled={updatingAvailability}
+            >
+              <SelectTrigger className={
+                availabilityStatus === "Available" 
+                  ? "border-green-500 text-green-600" 
+                  : availabilityStatus === "Maintenance" 
+                    ? "border-yellow-500 text-yellow-600"
+                    : availabilityStatus === "Not Available"
+                      ? "border-red-500 text-red-600"
+                      : "border-orange-500 text-orange-600"
+              }>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {AVAILABILITY_STATUSES.map((status) => (
+                  <SelectItem key={status} value={status}>
+                    <div className="flex items-center gap-2">
+                      {status === "Available" && <CheckCircle size={14} className="text-green-500" />}
+                      {status === "Maintenance" && <Wrench size={14} className="text-yellow-500" />}
+                      {status === "Resetting 10 hours" && <Clock size={14} className="text-orange-500" />}
+                      {status === "Resetting 34 hours" && <Clock size={14} className="text-orange-500" />}
+                      {status === "Not Available" && <AlertCircle size={14} className="text-red-500" />}
+                      {status}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Show date/time picker when Not Available is selected */}
+          {availabilityStatus === "Not Available" && (
+            <div className="space-y-3 p-4 bg-secondary/50 rounded-lg border border-border/50">
+              <Label className="text-sm font-medium">When will you be available?</Label>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="flex-1 justify-start text-left">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {availableAtDate ? format(availableAtDate, "MMM d, yyyy") : "Select date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={availableAtDate}
+                      onSelect={setAvailableAtDate}
+                      disabled={(date) => date < new Date()}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <Input
+                  type="time"
+                  value={availableAtTime}
+                  onChange={(e) => setAvailableAtTime(e.target.value)}
+                  className="w-full sm:w-32"
+                />
+              </div>
+              <Button 
+                variant="accent" 
+                size="sm" 
+                onClick={handleAvailableAtSave}
+                disabled={!availableAtDate || updatingAvailability}
+                className="w-full"
+              >
+                {updatingAvailability ? "Saving..." : "Save Availability"}
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Current Load */}
       {currentLoad ? (
