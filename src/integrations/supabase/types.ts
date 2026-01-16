@@ -95,6 +95,7 @@ export type Database = {
       loads: {
         Row: {
           arrived_at: string | null
+          arrived_at_delivery_at: string | null
           assigned_at: string | null
           bol_image_url: string | null
           client_id: string
@@ -123,6 +124,7 @@ export type Database = {
         }
         Insert: {
           arrived_at?: string | null
+          arrived_at_delivery_at?: string | null
           assigned_at?: string | null
           bol_image_url?: string | null
           client_id: string
@@ -151,6 +153,7 @@ export type Database = {
         }
         Update: {
           arrived_at?: string | null
+          arrived_at_delivery_at?: string | null
           assigned_at?: string | null
           bol_image_url?: string | null
           client_id?: string
