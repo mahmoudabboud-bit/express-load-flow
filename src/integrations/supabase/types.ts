@@ -119,6 +119,10 @@ export type Database = {
           in_transit_at: string | null
           loaded_at: string | null
           origin_address: string
+          paid_at: string | null
+          payment_intent_id: string | null
+          payment_required: boolean | null
+          payment_status: string | null
           pickup_date: string
           pickup_time: string | null
           price_cents: number | null
@@ -148,6 +152,10 @@ export type Database = {
           in_transit_at?: string | null
           loaded_at?: string | null
           origin_address: string
+          paid_at?: string | null
+          payment_intent_id?: string | null
+          payment_required?: boolean | null
+          payment_status?: string | null
           pickup_date: string
           pickup_time?: string | null
           price_cents?: number | null
@@ -177,6 +185,10 @@ export type Database = {
           in_transit_at?: string | null
           loaded_at?: string | null
           origin_address?: string
+          paid_at?: string | null
+          payment_intent_id?: string | null
+          payment_required?: boolean | null
+          payment_status?: string | null
           pickup_date?: string
           pickup_time?: string | null
           price_cents?: number | null
