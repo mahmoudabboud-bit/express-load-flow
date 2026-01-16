@@ -10,9 +10,10 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Package, ArrowLeft, Loader2, Filter, UserCheck, Truck, DollarSign, Pencil, Eye, MapPin, FileCheck, CheckCircle, User, Phone, Clock } from "lucide-react";
+import { Package, ArrowLeft, Loader2, Filter, UserCheck, Truck, DollarSign, Pencil, Eye, MapPin, FileCheck, CheckCircle, User, Phone, Clock, CreditCard } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -89,6 +90,7 @@ export default function LoadQueuePage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [viewingLoad, setViewingLoad] = useState<Load | null>(null);
+  const [requirePayment, setRequirePayment] = useState(false);
 
   useEffect(() => {
     if (user && userRole === "dispatcher") {
@@ -242,6 +244,7 @@ export default function LoadQueuePage() {
     setDriverName(editing ? load.driver_name || "" : "");
     setTruckNumber(editing ? load.truck_number || "" : "");
     setPrice(editing && load.price_cents ? (load.price_cents / 100).toFixed(2) : "");
+    setRequirePayment(editing ? (load as any).payment_required || false : false);
     if (editing && load.eta) {
       const etaDate = new Date(load.eta);
       setEta(etaDate);
@@ -302,6 +305,8 @@ export default function LoadQueuePage() {
       truck_number: truckNumber.trim(),
       price_cents: priceInCents,
       eta: combinedEta,
+      payment_required: requirePayment,
+      payment_status: requirePayment ? "pending" : "not_required",
     };
     
     // Only update status and timestamp if we're assigning, not editing
@@ -712,7 +717,27 @@ export default function LoadQueuePage() {
                     onChange={(e) => setEtaTime(e.target.value)}
                     className="w-[120px]"
                   />
+              </div>
+
+              {/* Require Payment Toggle */}
+              <div className="p-4 bg-accent/10 rounded-lg border border-accent/20">
+                <div className="flex items-center gap-3">
+                  <Checkbox
+                    id="requirePayment"
+                    checked={requirePayment}
+                    onCheckedChange={(checked) => setRequirePayment(checked === true)}
+                  />
+                  <div className="flex-1">
+                    <Label htmlFor="requirePayment" className="flex items-center gap-2 cursor-pointer">
+                      <CreditCard size={16} className="text-accent" />
+                      Require Client Payment
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Client will need to pay ${price || "0.00"} before the load is processed
+                    </p>
+                  </div>
                 </div>
+              </div>
               </div>
 
               <DialogFooter>

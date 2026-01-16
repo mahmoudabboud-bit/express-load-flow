@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { SignatureCapture } from "@/components/SignatureCapture";
 import { ShipmentTimeline } from "@/components/ShipmentTimeline";
 import { useToast } from "@/hooks/use-toast";
-import { Package, Plus, ArrowLeft, Loader2, Filter, Pencil, MapPin, Truck, Weight, Calendar, PenTool, FileCheck, Eye, DollarSign, User, Clock } from "lucide-react";
+import { Package, Plus, ArrowLeft, Loader2, Filter, Pencil, MapPin, Truck, Weight, Calendar, PenTool, FileCheck, Eye, DollarSign, User, Clock, CreditCard } from "lucide-react";
 import { format } from "date-fns";
 
 interface Load {
@@ -39,6 +39,9 @@ interface Load {
   arrived_at_delivery_at: string | null;
   delivered_at: string | null;
   eta: string | null;
+  payment_required: boolean;
+  payment_status: "not_required" | "pending" | "paid" | "failed";
+  paid_at: string | null;
 }
 
 const trailerTypes = ["Flat Bed", "Step Deck", "Minifloat", "1Ton"] as const;
@@ -63,6 +66,35 @@ export default function MyShipmentsPage() {
     delivery_time: "",
   });
   const [saving, setSaving] = useState(false);
+  const [processingPayment, setProcessingPayment] = useState<string | null>(null);
+
+  const handlePayNow = async (load: Load) => {
+    setProcessingPayment(load.id);
+    try {
+      const { data: sessionData, error } = await supabase.functions.invoke("create-payment-session", {
+        body: { load_id: load.id },
+      });
+
+      if (error) {
+        throw new Error(error.message || "Failed to create payment session");
+      }
+
+      if (sessionData?.url) {
+        window.location.href = sessionData.url;
+      } else {
+        throw new Error("No checkout URL received");
+      }
+    } catch (error) {
+      console.error("Payment error:", error);
+      toast({
+        variant: "destructive",
+        title: "Payment Failed",
+        description: error instanceof Error ? error.message : "Failed to initiate payment",
+      });
+    } finally {
+      setProcessingPayment(null);
+    }
+  };
 
   const openEditModal = (load: Load) => {
     setEditingLoad(load);
@@ -293,6 +325,25 @@ export default function MyShipmentsPage() {
                           <span className="text-xs text-muted-foreground">
                             {load.weight_lbs.toLocaleString()} lbs
                           </span>
+                          {/* Payment Status Badges */}
+                          {load.payment_required && load.payment_status === "pending" && (
+                            <span className="text-xs bg-yellow-500/20 text-yellow-700 px-2 py-1 rounded flex items-center gap-1">
+                              <CreditCard size={12} />
+                              Payment Required
+                            </span>
+                          )}
+                          {load.payment_status === "paid" && (
+                            <span className="text-xs bg-green-500/20 text-green-700 px-2 py-1 rounded flex items-center gap-1">
+                              <CreditCard size={12} />
+                              Paid
+                            </span>
+                          )}
+                          {load.payment_status === "failed" && (
+                            <span className="text-xs bg-red-500/20 text-red-700 px-2 py-1 rounded flex items-center gap-1">
+                              <CreditCard size={12} />
+                              Payment Failed
+                            </span>
+                          )}
                         </div>
                         <div className="text-sm mb-2">
                           <div className="flex items-start gap-2">
@@ -326,39 +377,57 @@ export default function MyShipmentsPage() {
                             {load.truck_number && <span className="text-muted-foreground"> • {load.truck_number}</span>}
                           </div>
                         )}
-                        {load.status === "Pending" && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openEditModal(load)}
-                            className="mt-2"
-                          >
-                            <Pencil size={14} className="mr-1" />
-                            Edit
-                          </Button>
-                        )}
-                        {(load.status === "Assigned" || load.status === "In-Transit") && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setViewingLoad(load)}
-                            className="mt-2"
-                          >
-                            <Eye size={14} className="mr-1" />
-                            View Details
-                          </Button>
-                        )}
-                        {load.status === "Delivered" && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setViewingLoad(load)}
-                            className="mt-2"
-                          >
-                            <Eye size={14} className="mr-1" />
-                            View Details
-                          </Button>
-                        )}
+                        
+                        {/* Action Buttons */}
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {/* Pay Now Button for pending payments */}
+                          {load.payment_required && (load.payment_status === "pending" || load.payment_status === "failed") && (
+                            <Button
+                              variant="accent"
+                              size="sm"
+                              onClick={() => handlePayNow(load)}
+                              disabled={processingPayment === load.id}
+                            >
+                              {processingPayment === load.id ? (
+                                <Loader2 size={14} className="mr-1 animate-spin" />
+                              ) : (
+                                <CreditCard size={14} className="mr-1" />
+                              )}
+                              Pay ${((load.price_cents || 0) / 100).toFixed(2)}
+                            </Button>
+                          )}
+                          
+                          {load.status === "Pending" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openEditModal(load)}
+                            >
+                              <Pencil size={14} className="mr-1" />
+                              Edit
+                            </Button>
+                          )}
+                          {(load.status === "Assigned" || load.status === "In-Transit" || load.status === "Arrived" || load.status === "Loaded" || load.status === "Arrived at Delivery") && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setViewingLoad(load)}
+                            >
+                              <Eye size={14} className="mr-1" />
+                              View Details
+                            </Button>
+                          )}
+                          {load.status === "Delivered" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setViewingLoad(load)}
+                            >
+                              <Eye size={14} className="mr-1" />
+                              View Details
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
