@@ -55,23 +55,21 @@ export default function AuthPage() {
       newErrors.password = passwordResult.error.errors[0].message;
     }
 
-    if (mode === "signup") {
-      // Client role requires all fields
-      if (role === "client") {
-        if (!firstName.trim()) newErrors.firstName = "Please enter your first name";
-        if (!lastName.trim()) newErrors.lastName = "Please enter your last name";
-        if (!phoneNumber.trim()) newErrors.phoneNumber = "Please enter your phone number";
-        if (!address.trim()) newErrors.address = "Please enter your address";
-      } else if (role === "driver") {
-        // Driver role requires name and truck info
-        if (!firstName.trim()) newErrors.firstName = "Please enter your first name";
-        if (!lastName.trim()) newErrors.lastName = "Please enter your last name";
-        if (!truckNumber.trim()) newErrors.truckNumber = "Please enter your truck number";
-      } else {
-        // Dispatcher just needs full name
-        if (!fullName.trim()) newErrors.fullName = "Please enter your full name";
+      if (mode === "signup") {
+        // Client role requires all fields
+        if (role === "client") {
+          if (!firstName.trim()) newErrors.firstName = "Please enter your first name";
+          if (!lastName.trim()) newErrors.lastName = "Please enter your last name";
+          if (!phoneNumber.trim()) newErrors.phoneNumber = "Please enter your phone number";
+          if (!address.trim()) newErrors.address = "Please enter your address";
+        } else if (role === "driver") {
+          // Driver role requires name and truck info
+          if (!firstName.trim()) newErrors.firstName = "Please enter your first name";
+          if (!lastName.trim()) newErrors.lastName = "Please enter your last name";
+          if (!truckNumber.trim()) newErrors.truckNumber = "Please enter your truck number";
+        }
+        // Note: Dispatcher signup is handled separately via invite-only flow
       }
-    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -178,13 +176,13 @@ export default function AuthPage() {
                 <div className="text-sm text-primary-foreground/70">Request loads & track shipments</div>
               </div>
             </div>
-            <div className="flex items-center gap-4 p-4 bg-primary-foreground/10 rounded-xl">
-              <BarChart3 className="text-accent shrink-0" size={24} />
-              <div>
-                <div className="font-semibold text-primary-foreground">Dispatchers</div>
-                <div className="text-sm text-primary-foreground/70">Manage loads & assign drivers</div>
-              </div>
-            </div>
+                <div className="flex items-center gap-4 p-4 bg-primary-foreground/10 rounded-xl">
+                  <BarChart3 className="text-accent shrink-0" size={24} />
+                  <div>
+                    <div className="font-semibold text-primary-foreground">Dispatchers</div>
+                    <div className="text-sm text-primary-foreground/70">Invite-only access</div>
+                  </div>
+                </div>
             <div className="flex items-center gap-4 p-4 bg-primary-foreground/10 rounded-xl">
               <Truck className="text-accent shrink-0" size={24} />
               <div>
@@ -347,22 +345,6 @@ export default function AuthPage() {
                   </>
                 )}
 
-                {mode === "signup" && role === "dispatcher" && (
-                  <div className="space-y-2">
-                    <Label htmlFor="fullName">Full Name</Label>
-                    <Input
-                      id="fullName"
-                      type="text"
-                      placeholder="John Doe"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      className={errors?.fullName ? "border-destructive" : ""}
-                    />
-                    {errors?.fullName && (
-                      <p className="text-sm text-destructive">{errors.fullName}</p>
-                    )}
-                  </div>
-                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
@@ -410,12 +392,6 @@ export default function AuthPage() {
                           <div className="flex items-center gap-2">
                             <Package size={16} />
                             Client – Request & track loads
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="dispatcher">
-                          <div className="flex items-center gap-2">
-                            <BarChart3 size={16} />
-                            Dispatcher – Manage all loads
                           </div>
                         </SelectItem>
                         <SelectItem value="driver">
