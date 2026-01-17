@@ -28,9 +28,10 @@ export default function AuthPage() {
   const [address, setAddress] = useState("");
   const [truckType, setTruckType] = useState("Flat Bed");
   const [truckNumber, setTruckNumber] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setRole] = useState<UserRole>("client");
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string; fullName?: string; firstName?: string; lastName?: string; phoneNumber?: string; address?: string; truckNumber?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string; password?: string; confirmPassword?: string; fullName?: string; firstName?: string; lastName?: string; phoneNumber?: string; address?: string; truckNumber?: string }>({});
 
   const { signIn, signUp, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -55,21 +56,26 @@ export default function AuthPage() {
       newErrors.password = passwordResult.error.errors[0].message;
     }
 
-      if (mode === "signup") {
-        // Client role requires all fields
-        if (role === "client") {
-          if (!firstName.trim()) newErrors.firstName = "Please enter your first name";
-          if (!lastName.trim()) newErrors.lastName = "Please enter your last name";
-          if (!phoneNumber.trim()) newErrors.phoneNumber = "Please enter your phone number";
-          if (!address.trim()) newErrors.address = "Please enter your address";
-        } else if (role === "driver") {
-          // Driver role requires name and truck info
-          if (!firstName.trim()) newErrors.firstName = "Please enter your first name";
-          if (!lastName.trim()) newErrors.lastName = "Please enter your last name";
-          if (!truckNumber.trim()) newErrors.truckNumber = "Please enter your truck number";
-        }
-        // Note: Dispatcher signup is handled separately via invite-only flow
+    if (mode === "signup") {
+      // Validate password confirmation
+      if (password !== confirmPassword) {
+        newErrors.confirmPassword = "Passwords do not match";
       }
+      
+      // Client role requires all fields
+      if (role === "client") {
+        if (!firstName.trim()) newErrors.firstName = "Please enter your first name";
+        if (!lastName.trim()) newErrors.lastName = "Please enter your last name";
+        if (!phoneNumber.trim()) newErrors.phoneNumber = "Please enter your phone number";
+        if (!address.trim()) newErrors.address = "Please enter your address";
+      } else if (role === "driver") {
+        // Driver role requires name and truck info
+        if (!firstName.trim()) newErrors.firstName = "Please enter your first name";
+        if (!lastName.trim()) newErrors.lastName = "Please enter your last name";
+        if (!truckNumber.trim()) newErrors.truckNumber = "Please enter your truck number";
+      }
+      // Note: Dispatcher signup is handled separately via invite-only flow
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -375,6 +381,23 @@ export default function AuthPage() {
                     <p className="text-sm text-destructive">{errors.password}</p>
                   )}
                 </div>
+
+                {mode === "signup" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      placeholder="••••••••"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className={errors.confirmPassword ? "border-destructive" : ""}
+                    />
+                    {errors.confirmPassword && (
+                      <p className="text-sm text-destructive">{errors.confirmPassword}</p>
+                    )}
+                  </div>
+                )}
 
                 {mode === "signup" && (
                   <div className="space-y-2">
