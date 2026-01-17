@@ -182,13 +182,6 @@ export default function AuthPage() {
                 <div className="text-sm text-primary-foreground/70">Request loads & track shipments</div>
               </div>
             </div>
-                <div className="flex items-center gap-4 p-4 bg-primary-foreground/10 rounded-xl">
-                  <BarChart3 className="text-accent shrink-0" size={24} />
-                  <div>
-                    <div className="font-semibold text-primary-foreground">Dispatchers</div>
-                    <div className="text-sm text-primary-foreground/70">Invite-only access</div>
-                  </div>
-                </div>
             <div className="flex items-center gap-4 p-4 bg-primary-foreground/10 rounded-xl">
               <Truck className="text-accent shrink-0" size={24} />
               <div>
