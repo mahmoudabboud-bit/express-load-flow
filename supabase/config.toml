@@ -2,3 +2,6 @@ project_id = "uatzdkwskosxtphidmiu"
 
 [functions.stripe-webhook]
 verify_jwt = false
+
+[functions.send-dispatcher-invite]
+verify_jwt = false

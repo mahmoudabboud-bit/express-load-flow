@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/lib/auth-context";
 import LandingPage from "./pages/LandingPage";
 import AuthPage from "./pages/AuthPage";
+import DispatcherSignupPage from "./pages/DispatcherSignupPage";
 import Dashboard from "./pages/Dashboard";
 import RequestLoadPage from "./pages/RequestLoadPage";
 import MyShipmentsPage from "./pages/MyShipmentsPage";
@@ -29,6 +30,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/auth" element={<AuthPage />} />
+            <Route path="/auth/dispatcher-signup" element={<DispatcherSignupPage />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/dashboard/request" element={<RequestLoadPage />} />
             <Route path="/dashboard/shipments" element={<MyShipmentsPage />} />
