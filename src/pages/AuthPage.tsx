@@ -174,22 +174,58 @@ export default function AuthPage() {
               : "Create an account to start using our hauling and logistics services."}
           </p>
 
-          <div className="space-y-4">
-            <div className="flex items-center gap-4 p-4 bg-primary-foreground/10 rounded-xl">
-              <Package className="text-accent shrink-0" size={24} />
-              <div>
-                <div className="font-semibold text-primary-foreground">Clients</div>
-                <div className="text-sm text-primary-foreground/70">Request loads & track shipments</div>
+          {mode === "signup" && (
+            <div className="space-y-4">
+              <button
+                type="button"
+                onClick={() => { setRole("client"); setErrors({}); }}
+                className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all duration-200 text-left ${
+                  role === "client"
+                    ? "bg-accent/20 ring-2 ring-accent"
+                    : "bg-primary-foreground/10 hover:bg-primary-foreground/20"
+                }`}
+              >
+                <Package className={`shrink-0 ${role === "client" ? "text-accent" : "text-primary-foreground/70"}`} size={24} />
+                <div>
+                  <div className={`font-semibold ${role === "client" ? "text-accent" : "text-primary-foreground"}`}>Clients</div>
+                  <div className="text-sm text-primary-foreground/70">Request loads & track shipments</div>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setRole("driver"); setErrors({}); }}
+                className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all duration-200 text-left ${
+                  role === "driver"
+                    ? "bg-accent/20 ring-2 ring-accent"
+                    : "bg-primary-foreground/10 hover:bg-primary-foreground/20"
+                }`}
+              >
+                <Truck className={`shrink-0 ${role === "driver" ? "text-accent" : "text-primary-foreground/70"}`} size={24} />
+                <div>
+                  <div className={`font-semibold ${role === "driver" ? "text-accent" : "text-primary-foreground"}`}>Drivers</div>
+                  <div className="text-sm text-primary-foreground/70">Update status on the go</div>
+                </div>
+              </button>
+            </div>
+          )}
+          {mode === "signin" && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4 p-4 bg-primary-foreground/10 rounded-xl">
+                <Package className="text-accent shrink-0" size={24} />
+                <div>
+                  <div className="font-semibold text-primary-foreground">Clients</div>
+                  <div className="text-sm text-primary-foreground/70">Request loads & track shipments</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 p-4 bg-primary-foreground/10 rounded-xl">
+                <Truck className="text-accent shrink-0" size={24} />
+                <div>
+                  <div className="font-semibold text-primary-foreground">Drivers</div>
+                  <div className="text-sm text-primary-foreground/70">Update status on the go</div>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-4 p-4 bg-primary-foreground/10 rounded-xl">
-              <Truck className="text-accent shrink-0" size={24} />
-              <div>
-                <div className="font-semibold text-primary-foreground">Drivers</div>
-                <div className="text-sm text-primary-foreground/70">Update status on the go</div>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
