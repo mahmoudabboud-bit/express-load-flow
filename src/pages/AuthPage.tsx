@@ -29,7 +29,7 @@ export default function AuthPage() {
   const [truckType, setTruckType] = useState("Flat Bed");
   const [truckNumber, setTruckNumber] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [role, setRole] = useState<UserRole>("client");
+  const [role, setRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; confirmPassword?: string; fullName?: string; firstName?: string; lastName?: string; phoneNumber?: string; address?: string; truckNumber?: string }>({});
 
@@ -123,7 +123,7 @@ export default function AuthPage() {
         } : undefined;
         
         const displayName = role === "client" || role === "driver" ? `${firstName} ${lastName}` : fullName;
-        const { error } = await signUp(email, password, role, displayName, clientData, driverData);
+        const { error } = await signUp(email, password, role!, displayName, clientData, driverData);
         if (error) {
           const errorMessage = error.message.includes("already registered")
             ? "This email is already registered. Please sign in instead."
@@ -254,6 +254,34 @@ export default function AuthPage() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
+                {mode === "signup" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="role">I am a...</Label>
+                    <Select value={role || ""} onValueChange={(v) => {
+                      setRole(v as UserRole);
+                      setErrors({});
+                    }}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="client">
+                          <div className="flex items-center gap-2">
+                            <Package size={16} />
+                            Client – Request & track loads
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="driver">
+                          <div className="flex items-center gap-2">
+                            <Truck size={16} />
+                            Driver – Update load status
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 {mode === "signup" && role === "client" && (
                   <>
                     <div className="grid grid-cols-2 gap-3">
@@ -381,97 +409,72 @@ export default function AuthPage() {
                 )}
 
 
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className={errors.email ? "border-destructive" : ""}
-                  />
-                  {errors.email && (
-                    <p className="text-sm text-destructive">{errors.email}</p>
-                  )}
-                </div>
+                {(mode === "signin" || role) && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="you@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className={errors.email ? "border-destructive" : ""}
+                      />
+                      {errors.email && (
+                        <p className="text-sm text-destructive">{errors.email}</p>
+                      )}
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className={errors.password ? "border-destructive" : ""}
-                  />
-                  {errors.password && (
-                    <p className="text-sm text-destructive">{errors.password}</p>
-                  )}
-                </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="password">Password</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className={errors.password ? "border-destructive" : ""}
+                      />
+                      {errors.password && (
+                        <p className="text-sm text-destructive">{errors.password}</p>
+                      )}
+                    </div>
 
-                {mode === "signup" && (
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm Password</Label>
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      placeholder="••••••••"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className={errors.confirmPassword ? "border-destructive" : ""}
-                    />
-                    {errors.confirmPassword && (
-                      <p className="text-sm text-destructive">{errors.confirmPassword}</p>
+                    {mode === "signup" && (
+                      <div className="space-y-2">
+                        <Label htmlFor="confirmPassword">Confirm Password</Label>
+                        <Input
+                          id="confirmPassword"
+                          type="password"
+                          placeholder="••••••••"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          className={errors.confirmPassword ? "border-destructive" : ""}
+                        />
+                        {errors.confirmPassword && (
+                          <p className="text-sm text-destructive">{errors.confirmPassword}</p>
+                        )}
+                      </div>
                     )}
-                  </div>
-                )}
 
-                {mode === "signup" && (
-                  <div className="space-y-2">
-                    <Label htmlFor="role">I am a...</Label>
-                    <Select value={role} onValueChange={(v) => {
-                      setRole(v as UserRole);
-                      // Reset form fields when role changes
-                      setErrors({});
-                    }}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="client">
-                          <div className="flex items-center gap-2">
-                            <Package size={16} />
-                            Client – Request & track loads
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="driver">
-                          <div className="flex items-center gap-2">
-                            <Truck size={16} />
-                            Driver – Update load status
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                    <Button
+                      type="submit"
+                      variant="accent"
+                      size="lg"
+                      className="w-full"
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : mode === "signin" ? (
+                        "Sign In"
+                      ) : (
+                        "Create Account"
+                      )}
+                    </Button>
+                  </>
                 )}
-
-                <Button
-                  type="submit"
-                  variant="accent"
-                  size="lg"
-                  className="w-full"
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : mode === "signin" ? (
-                    "Sign In"
-                  ) : (
-                    "Create Account"
-                  )}
-                </Button>
               </form>
 
               <div className="mt-6 text-center text-sm text-muted-foreground">
