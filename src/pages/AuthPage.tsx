@@ -283,7 +283,7 @@ export default function AuthPage() {
                 )}
 
                 {mode === "signup" && role === "client" && (
-                  <>
+                  <div className="space-y-4 animate-fade-in-up">
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2">
                         <Label htmlFor="firstName">First Name</Label>
@@ -342,11 +342,11 @@ export default function AuthPage() {
                         <p className="text-sm text-destructive">{errors.address}</p>
                       )}
                     </div>
-                  </>
+                  </div>
                 )}
 
                 {mode === "signup" && role === "driver" && (
-                  <>
+                  <div className="space-y-4 animate-fade-in-up">
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2">
                         <Label htmlFor="driverFirstName">First Name</Label>
@@ -405,12 +405,12 @@ export default function AuthPage() {
                         <p className="text-sm text-destructive">{errors.truckNumber}</p>
                       )}
                     </div>
-                  </>
+                  </div>
                 )}
 
 
                 {(mode === "signin" || role) && (
-                  <>
+                  <div className={`space-y-4 ${mode === "signup" ? "animate-fade-in-up" : ""}`}>
                     <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>
                       <Input
@@ -473,7 +473,7 @@ export default function AuthPage() {
                         "Create Account"
                       )}
                     </Button>
-                  </>
+                  </div>
                 )}
               </form>
 
