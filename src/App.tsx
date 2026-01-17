@@ -16,6 +16,7 @@ import DriverLoadsPage from "./pages/DriverLoadsPage";
 import DriversPage from "./pages/DriversPage";
 import ClientsPage from "./pages/ClientsPage";
 import ClientProfilePage from "./pages/ClientProfilePage";
+import DispatcherInvitesPage from "./pages/DispatcherInvitesPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -40,6 +41,7 @@ const App = () => (
             <Route path="/dashboard/drivers" element={<DriversPage />} />
             <Route path="/dashboard/clients" element={<ClientsPage />} />
             <Route path="/dashboard/profile" element={<ClientProfilePage />} />
+            <Route path="/dashboard/invites" element={<DispatcherInvitesPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

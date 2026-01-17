@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/StatusBadge";
 import { SignedImage } from "@/components/SignedImage";
-import { InviteDispatcherDialog } from "@/components/InviteDispatcherDialog";
 import {
   Dialog,
   DialogContent,
@@ -88,14 +87,12 @@ export function DispatcherDashboard() {
           <p className="text-muted-foreground">Manage loads and track operations.</p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <InviteDispatcherDialog
-            trigger={
-              <Button variant="outline">
-                <UserPlus className="mr-2" size={18} />
-                Invite Dispatcher
-              </Button>
-            }
-          />
+          <Link to="/dashboard/invites">
+            <Button variant="outline">
+              <UserPlus className="mr-2" size={18} />
+              Manage Dispatchers
+            </Button>
+          </Link>
           <Link to="/dashboard/clients">
             <Button variant="outline">
               <Users className="mr-2" size={18} />
