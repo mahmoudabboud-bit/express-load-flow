@@ -38,7 +38,7 @@ const driverDataSchema = z.object({
 });
 
 const notificationRequestSchema = z.object({
-  type: z.enum(['load_submitted', 'load_approved', 'status_in_transit', 'status_delivered', 'eta_updated', 'driver_availability_changed'], {
+  type: z.enum(['load_submitted', 'load_approved', 'status_in_transit', 'status_delivered', 'eta_updated', 'driver_availability_changed', 'payment_requested'], {
     errorMap: () => ({ message: "Invalid notification type" })
   }),
   recipientEmail: z.string().email("Invalid email format").max(255, "Email too long").optional(),

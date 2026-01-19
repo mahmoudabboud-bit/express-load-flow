@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-type LoadStatus = "Pending" | "Assigned" | "Arrived" | "Loaded" | "In-Transit" | "Arrived at Delivery" | "Delivered";
+type LoadStatus = "Pending" | "Awaiting Payment" | "Assigned" | "Arrived" | "Loaded" | "In-Transit" | "Arrived at Delivery" | "Delivered";
 
 interface StatusBadgeProps {
   status: LoadStatus;
@@ -9,6 +9,7 @@ interface StatusBadgeProps {
 
 const statusStyles: Record<LoadStatus, string> = {
   Pending: "status-pending",
+  "Awaiting Payment": "bg-amber-500/20 text-amber-600 border-amber-500/30",
   Assigned: "status-approved",
   Arrived: "status-approved",
   Loaded: "status-in-transit",
