@@ -32,7 +32,7 @@ interface Load {
   id: string;
   origin_address: string;
   destination_address: string;
-  status: "Pending" | "Assigned" | "Arrived" | "Loaded" | "In-Transit" | "Arrived at Delivery" | "Delivered";
+  status: "Pending" | "Awaiting Payment" | "Assigned" | "Arrived" | "Loaded" | "In-Transit" | "Arrived at Delivery" | "Delivered";
   trailer_type: string;
   weight_lbs: number;
   pickup_date: string;
@@ -51,6 +51,8 @@ interface Load {
   in_transit_at: string | null;
   eta: string | null;
   client?: Client | null;
+  payment_required?: boolean;
+  payment_status?: string | null;
 }
 
 interface Driver {
@@ -91,6 +93,7 @@ export default function LoadQueuePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [viewingLoad, setViewingLoad] = useState<Load | null>(null);
   const [requirePayment, setRequirePayment] = useState(false);
+  const [isAssigningAfterPayment, setIsAssigningAfterPayment] = useState(false);
 
   useEffect(() => {
     if (user && userRole === "dispatcher") {
@@ -237,13 +240,14 @@ export default function LoadQueuePage() {
     return clients.find(c => c.user_id === load.client_id) || null;
   };
 
-  const openApprovalModal = (load: Load, editing = false) => {
+  const openApprovalModal = (load: Load, editing = false, assignAfterPayment = false) => {
     setSelectedLoad(load);
     setIsEditing(editing);
+    setIsAssigningAfterPayment(assignAfterPayment);
     setSelectedDriverId(editing ? load.driver_id || "" : "");
     setDriverName(editing ? load.driver_name || "" : "");
     setTruckNumber(editing ? load.truck_number || "" : "");
-    setPrice(editing && load.price_cents ? (load.price_cents / 100).toFixed(2) : "");
+    setPrice(editing && load.price_cents ? (load.price_cents / 100).toFixed(2) : assignAfterPayment && load.price_cents ? (load.price_cents / 100).toFixed(2) : "");
     setRequirePayment(editing ? (load as any).payment_required || false : false);
     if (editing && load.eta) {
       const etaDate = new Date(load.eta);
@@ -266,17 +270,20 @@ export default function LoadQueuePage() {
   };
 
   const handleApprove = async () => {
-    if (!selectedLoad || !selectedDriverId || !truckNumber.trim() || !price.trim()) {
+    // For "Send for Payment" flow - we don't need driver selection
+    const isSendingForPayment = requirePayment && !isEditing && !isAssigningAfterPayment;
+    
+    if (!selectedLoad) return;
+    
+    // Validate price is always required
+    if (!price.trim()) {
       toast({
         variant: "destructive",
         title: "Missing information",
-        description: "Please select a driver, enter truck number, and price.",
+        description: "Please enter a price.",
       });
       return;
     }
-
-    const selectedDriver = drivers.find(d => d.id === selectedDriverId);
-    const driverFullName = selectedDriver ? `${selectedDriver.first_name} ${selectedDriver.last_name}` : driverName.trim();
 
     const priceInCents = Math.round(parseFloat(price) * 100);
     if (isNaN(priceInCents) || priceInCents <= 0) {
@@ -286,6 +293,18 @@ export default function LoadQueuePage() {
         description: "Please enter a valid price.",
       });
       return;
+    }
+
+    // For normal assignment or assign after payment, we need driver info
+    if (!isSendingForPayment) {
+      if (!selectedDriverId || !truckNumber.trim()) {
+        toast({
+          variant: "destructive",
+          title: "Missing information",
+          description: "Please select a driver and enter truck number.",
+        });
+        return;
+      }
     }
 
     setApproving(true);
@@ -299,18 +318,82 @@ export default function LoadQueuePage() {
       combinedEta = etaWithTime.toISOString();
     }
 
+    const selectedDriver = drivers.find(d => d.id === selectedDriverId);
+    const driverFullName = selectedDriver ? `${selectedDriver.first_name} ${selectedDriver.last_name}` : driverName.trim();
+
+    // Handle "Send for Payment" flow
+    if (isSendingForPayment) {
+      const updateData: Record<string, unknown> = {
+        status: "Awaiting Payment",
+        price_cents: priceInCents,
+        payment_required: true,
+        payment_status: "pending",
+      };
+
+      const { error } = await supabase
+        .from("loads")
+        .update(updateData)
+        .eq("id", selectedLoad.id);
+
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Failed to send for payment",
+          description: error.message,
+        });
+      } else {
+        // Get client email and send payment request notification
+        const { data: clientProfile } = await supabase
+          .from("profiles")
+          .select("email")
+          .eq("id", selectedLoad.client_id)
+          .single();
+
+        if (clientProfile?.email) {
+          await sendNotification(
+            "payment_requested",
+            clientProfile.email,
+            {
+              id: selectedLoad.id,
+              origin_address: selectedLoad.origin_address,
+              destination_address: selectedLoad.destination_address,
+              pickup_date: selectedLoad.pickup_date,
+            },
+            false,
+            selectedLoad.client_id
+          );
+        }
+
+        toast({
+          title: "Sent for Payment",
+          description: `Client has been notified to pay $${(priceInCents / 100).toFixed(2)}.`,
+        });
+        setApprovalModalOpen(false);
+        fetchLoads();
+      }
+      setApproving(false);
+      return;
+    }
+
+    // Handle "Assign Driver" flow (normal assignment or after payment)
     const updateData: Record<string, unknown> = {
       driver_id: selectedDriver?.user_id || null,
       driver_name: driverFullName,
       truck_number: truckNumber.trim(),
       price_cents: priceInCents,
       eta: combinedEta,
-      payment_required: requirePayment,
-      payment_status: requirePayment ? "pending" : "not_required",
     };
     
-    // Only update status and timestamp if we're assigning, not editing
-    if (!isEditing) {
+    // For normal assignment (not editing, not after payment)
+    if (!isEditing && !isAssigningAfterPayment) {
+      updateData.status = "Assigned";
+      updateData.assigned_at = new Date().toISOString();
+      updateData.payment_required = requirePayment;
+      updateData.payment_status = requirePayment ? "pending" : "not_required";
+    }
+    
+    // For assignment after payment - update status to Assigned
+    if (isAssigningAfterPayment) {
       updateData.status = "Assigned";
       updateData.assigned_at = new Date().toISOString();
     }
@@ -327,7 +410,7 @@ export default function LoadQueuePage() {
         description: error.message,
       });
     } else {
-      // Only send notification for new assignments, not edits
+      // Send notification for new assignments (not edits)
       if (!isEditing) {
         // Get client email from profiles table
         const { data: clientProfile } = await supabase
@@ -346,7 +429,7 @@ export default function LoadQueuePage() {
               origin_address: selectedLoad.origin_address,
               destination_address: selectedLoad.destination_address,
               pickup_date: selectedLoad.pickup_date,
-              driver_name: driverName.trim(),
+              driver_name: driverFullName,
               truck_number: truckNumber.trim(),
             },
             false,
@@ -389,8 +472,8 @@ export default function LoadQueuePage() {
       }
       
       toast({
-        title: isEditing ? "Load Updated!" : "Load Assigned!",
-        description: `${isEditing ? "Updated" : "Assigned"} to ${driverName} (${truckNumber}).`,
+        title: isEditing ? "Load Updated!" : isAssigningAfterPayment ? "Driver Assigned!" : "Load Assigned!",
+        description: `${isEditing ? "Updated" : "Assigned"} to ${driverFullName} (${truckNumber.trim()}).`,
       });
       setApprovalModalOpen(false);
       fetchLoads();
@@ -442,6 +525,7 @@ export default function LoadQueuePage() {
             <SelectContent>
               <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="Pending">Pending</SelectItem>
+              <SelectItem value="Awaiting Payment">Awaiting Payment</SelectItem>
               <SelectItem value="Assigned">Assigned</SelectItem>
               <SelectItem value="Arrived">Arrived</SelectItem>
               <SelectItem value="Loaded">Loaded</SelectItem>
@@ -535,6 +619,33 @@ export default function LoadQueuePage() {
                             Approve & Assign
                           </Button>
                         )}
+                        {load.status === "Awaiting Payment" && (
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setViewingLoad(load)}
+                            >
+                              <Eye className="mr-2" size={16} />
+                              View
+                            </Button>
+                            {load.payment_status === "paid" ? (
+                              <Button
+                                variant="accent"
+                                size="sm"
+                                onClick={() => openApprovalModal(load, false, true)}
+                              >
+                                <UserCheck className="mr-2" size={16} />
+                                Assign Driver
+                              </Button>
+                            ) : (
+                              <span className="text-xs text-amber-600 bg-amber-500/10 px-3 py-2 rounded-lg flex items-center gap-1">
+                                <CreditCard size={14} />
+                                Awaiting Payment
+                              </span>
+                            )}
+                          </div>
+                        )}
                         {load.status === "Assigned" && (
                           <div className="flex gap-2">
                             <Button
@@ -580,175 +691,169 @@ export default function LoadQueuePage() {
       <Dialog open={approvalModalOpen} onOpenChange={setApprovalModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{isEditing ? "Edit Assignment" : "Approve & Assign Driver"}</DialogTitle>
+            <DialogTitle>
+              {isAssigningAfterPayment 
+                ? "Assign Driver" 
+                : isEditing 
+                  ? "Edit Assignment" 
+                  : requirePayment 
+                    ? "Send for Payment" 
+                    : "Approve & Assign Driver"}
+            </DialogTitle>
             <DialogDescription>
-              {isEditing ? "Update driver, truck, or price details." : "Assign a driver and truck to this load."}
+              {isAssigningAfterPayment 
+                ? "Payment received. Assign a driver to this load." 
+                : isEditing 
+                  ? "Update driver, truck, or price details." 
+                  : requirePayment 
+                    ? "Client will be notified to pay before a driver is assigned."
+                    : "Assign a driver and truck to this load."}
             </DialogDescription>
           </DialogHeader>
 
           {selectedLoad && (() => {
             const selectedClient = getClientForLoad(selectedLoad);
             return (
-            <div className="space-y-4">
-              <div className="p-4 bg-secondary/50 rounded-lg text-sm">
-                <div className="font-medium mb-2">{selectedLoad.trailer_type} • {selectedLoad.weight_lbs.toLocaleString()} lbs</div>
-                {selectedClient && (
-                  <div className="mb-2 pb-2 border-b border-border/50">
-                    <span className="text-muted-foreground">Client:</span>{" "}
-                    <span className="font-medium">{selectedClient.first_name} {selectedClient.last_name}</span>
-                    <span className="text-muted-foreground"> ({selectedClient.phone_number})</span>
-                  </div>
-                )}
-                <div><span className="text-muted-foreground">From:</span> {selectedLoad.origin_address}</div>
-                <div><span className="text-muted-foreground">To:</span> {selectedLoad.destination_address}</div>
-                <div className="mt-2 pt-2 border-t border-border/50">
-                  <div>
-                    <span className="text-muted-foreground">Pickup:</span>{" "}
-                    {new Date(selectedLoad.pickup_date).toLocaleDateString()}
-                    {selectedLoad.pickup_time && ` at ${format(new Date(`2000-01-01T${selectedLoad.pickup_time}`), "h:mm a")}`}
-                  </div>
-                {(selectedLoad as any).delivery_asap ? (
-                    <div>
-                      <span className="text-muted-foreground">Delivery:</span>{" "}
-                      <span className="font-medium text-accent">ASAP</span>
+              <>
+                <div className="space-y-4">
+                  <div className="p-4 bg-secondary/50 rounded-lg text-sm">
+                    <div className="font-medium mb-2">{selectedLoad.trailer_type} • {selectedLoad.weight_lbs.toLocaleString()} lbs</div>
+                    {selectedClient && (
+                      <div className="mb-2 pb-2 border-b border-border/50">
+                        <span className="text-muted-foreground">Client:</span>{" "}
+                        <span className="font-medium">{selectedClient.first_name} {selectedClient.last_name}</span>
+                        <span className="text-muted-foreground"> ({selectedClient.phone_number})</span>
+                      </div>
+                    )}
+                    <div><span className="text-muted-foreground">From:</span> {selectedLoad.origin_address}</div>
+                    <div><span className="text-muted-foreground">To:</span> {selectedLoad.destination_address}</div>
+                    <div className="mt-2 pt-2 border-t border-border/50">
+                      <div>
+                        <span className="text-muted-foreground">Pickup:</span>{" "}
+                        {new Date(selectedLoad.pickup_date).toLocaleDateString()}
+                        {selectedLoad.pickup_time && ` at ${format(new Date(`2000-01-01T${selectedLoad.pickup_time}`), "h:mm a")}`}
+                      </div>
+                      {(selectedLoad as any).delivery_asap ? (
+                        <div>
+                          <span className="text-muted-foreground">Delivery:</span>{" "}
+                          <span className="font-medium text-accent">ASAP</span>
+                        </div>
+                      ) : selectedLoad.delivery_date && (
+                        <div>
+                          <span className="text-muted-foreground">Delivery:</span>{" "}
+                          {new Date(selectedLoad.delivery_date).toLocaleDateString()}
+                          {selectedLoad.delivery_time && ` at ${format(new Date(`2000-01-01T${selectedLoad.delivery_time}`), "h:mm a")}`}
+                        </div>
+                      )}
                     </div>
-                  ) : selectedLoad.delivery_date && (
-                    <div>
-                      <span className="text-muted-foreground">Delivery:</span>{" "}
-                      {new Date(selectedLoad.delivery_date).toLocaleDateString()}
-                      {selectedLoad.delivery_time && ` at ${format(new Date(`2000-01-01T${selectedLoad.delivery_time}`), "h:mm a")}`}
+                  </div>
+
+                  {!(requirePayment && !isEditing && !isAssigningAfterPayment) && (
+                    <>
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2">
+                          <UserCheck size={16} />
+                          Select Driver
+                        </Label>
+                        <Select value={selectedDriverId} onValueChange={handleDriverSelect}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a driver" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableDrivers.length === 0 ? (
+                              <div className="px-3 py-2 text-sm text-muted-foreground">
+                                No available drivers. <Link to="/dashboard/drivers" className="text-accent underline">Manage drivers</Link>.
+                              </div>
+                            ) : (
+                              availableDrivers.map((driver) => (
+                                <SelectItem key={driver.id} value={driver.id}>
+                                  <div className="flex items-center justify-between w-full gap-2">
+                                    <span>{driver.first_name} {driver.last_name} - {driver.truck_type} ({driver.truck_number})</span>
+                                    <span className={`text-xs px-2 py-0.5 rounded-full ${driver.activeLoads === 0 ? "bg-green-500/20 text-green-600" : driver.activeLoads && driver.activeLoads >= 3 ? "bg-red-500/20 text-red-600" : "bg-yellow-500/20 text-yellow-600"}`}>
+                                      {driver.activeLoads || 0} active
+                                    </span>
+                                  </div>
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="truckNumber" className="flex items-center gap-2">
+                          <Truck size={16} />
+                          Truck Number
+                        </Label>
+                        <Input id="truckNumber" placeholder="TRK-1234" value={truckNumber} onChange={(e) => setTruckNumber(e.target.value)} />
+                      </div>
+                    </>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label htmlFor="price" className="flex items-center gap-2">
+                      <DollarSign size={16} />
+                      Price ($)
+                    </Label>
+                    <Input id="price" type="number" min="0" step="0.01" placeholder="1500.00" value={price} onChange={(e) => setPrice(e.target.value)} disabled={isAssigningAfterPayment} />
+                  </div>
+
+                  {!(requirePayment && !isEditing && !isAssigningAfterPayment) && (
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <Clock size={16} />
+                        ETA (Estimated Arrival)
+                      </Label>
+                      <div className="flex gap-2">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className="flex-1 justify-start text-left font-normal">
+                              {eta ? format(eta, "PPP") : <span className="text-muted-foreground">Select date</span>}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar mode="single" selected={eta} onSelect={setEta} initialFocus />
+                          </PopoverContent>
+                        </Popover>
+                        <Input type="time" value={etaTime} onChange={(e) => setEtaTime(e.target.value)} className="w-[120px]" />
+                      </div>
+                    </div>
+                  )}
+
+                  {!isEditing && !isAssigningAfterPayment && (
+                    <div className={`p-4 rounded-lg border ${requirePayment ? "bg-amber-500/10 border-amber-500/30" : "bg-accent/10 border-accent/20"}`}>
+                      <div className="flex items-center gap-3">
+                        <Checkbox id="requirePayment" checked={requirePayment} onCheckedChange={(checked) => setRequirePayment(checked === true)} />
+                        <div className="flex-1">
+                          <Label htmlFor="requirePayment" className="flex items-center gap-2 cursor-pointer">
+                            <CreditCard size={16} className={requirePayment ? "text-amber-600" : "text-accent"} />
+                            Require Client Payment
+                          </Label>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {requirePayment ? `Client will be notified to pay $${price || "0.00"} before you can assign a driver.` : `Client will need to pay $${price || "0.00"} before the load is processed`}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {isAssigningAfterPayment && (
+                    <div className="p-4 bg-green-500/10 rounded-lg border border-green-500/30">
+                      <div className="flex items-center gap-2 text-green-600">
+                        <CheckCircle size={16} />
+                        <span className="font-medium">Payment Received</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">Client has paid ${price || "0.00"}. You can now assign a driver.</p>
                     </div>
                   )}
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <UserCheck size={16} />
-                  Select Driver
-                </Label>
-                <Select value={selectedDriverId} onValueChange={handleDriverSelect}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a driver" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableDrivers.length === 0 ? (
-                      <div className="px-3 py-2 text-sm text-muted-foreground">
-                        No available drivers. <Link to="/dashboard/drivers" className="text-accent underline">Manage drivers</Link>.
-                      </div>
-                    ) : (
-                      availableDrivers.map((driver) => (
-                        <SelectItem key={driver.id} value={driver.id}>
-                          <div className="flex items-center justify-between w-full gap-2">
-                            <span>{driver.first_name} {driver.last_name} - {driver.truck_type} ({driver.truck_number})</span>
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${
-                              driver.activeLoads === 0 
-                                ? "bg-green-500/20 text-green-600" 
-                                : driver.activeLoads && driver.activeLoads >= 3 
-                                  ? "bg-red-500/20 text-red-600" 
-                                  : "bg-yellow-500/20 text-yellow-600"
-                            }`}>
-                              {driver.activeLoads || 0} active
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="truckNumber" className="flex items-center gap-2">
-                  <Truck size={16} />
-                  Truck Number
-                </Label>
-                <Input
-                  id="truckNumber"
-                  placeholder="TRK-1234"
-                  value={truckNumber}
-                  onChange={(e) => setTruckNumber(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="price" className="flex items-center gap-2">
-                  <DollarSign size={16} />
-                  Price ($)
-                </Label>
-                <Input
-                  id="price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="1500.00"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Clock size={16} />
-                  ETA (Estimated Arrival)
-                </Label>
-                <div className="flex gap-2">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="flex-1 justify-start text-left font-normal"
-                      >
-                        {eta ? format(eta, "PPP") : <span className="text-muted-foreground">Select date</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={eta}
-                        onSelect={setEta}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <Input
-                    type="time"
-                    value={etaTime}
-                    onChange={(e) => setEtaTime(e.target.value)}
-                    className="w-[120px]"
-                  />
-              </div>
-
-              {/* Require Payment Toggle */}
-              <div className="p-4 bg-accent/10 rounded-lg border border-accent/20">
-                <div className="flex items-center gap-3">
-                  <Checkbox
-                    id="requirePayment"
-                    checked={requirePayment}
-                    onCheckedChange={(checked) => setRequirePayment(checked === true)}
-                  />
-                  <div className="flex-1">
-                    <Label htmlFor="requirePayment" className="flex items-center gap-2 cursor-pointer">
-                      <CreditCard size={16} className="text-accent" />
-                      Require Client Payment
-                    </Label>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Client will need to pay ${price || "0.00"} before the load is processed
-                    </p>
-                  </div>
-                </div>
-              </div>
-              </div>
-
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setApprovalModalOpen(false)}>
-                  Cancel
-                </Button>
-                <Button variant="accent" onClick={handleApprove} disabled={approving}>
-                  {approving ? <Loader2 className="w-4 h-4 animate-spin" /> : isEditing ? "Save Changes" : "Assign Load"}
-                </Button>
-              </DialogFooter>
-            </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setApprovalModalOpen(false)}>Cancel</Button>
+                  <Button variant="accent" onClick={handleApprove} disabled={approving}>
+                    {approving ? <Loader2 className="w-4 h-4 animate-spin" /> : isAssigningAfterPayment ? "Assign Driver" : isEditing ? "Save Changes" : requirePayment ? "Send for Payment" : "Assign Load"}
+                  </Button>
+                </DialogFooter>
+              </>
             );
           })()}
         </DialogContent>

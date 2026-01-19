@@ -20,7 +20,7 @@ interface DriverAvailabilityData {
   truckNumber?: string | null;
 }
 
-type NotificationType = "load_submitted" | "load_approved" | "status_in_transit" | "status_delivered" | "eta_updated" | "driver_availability_changed";
+type NotificationType = "load_submitted" | "load_approved" | "status_in_transit" | "status_delivered" | "eta_updated" | "driver_availability_changed" | "payment_requested";
 
 export async function sendNotification(
   type: NotificationType,
