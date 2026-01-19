@@ -96,15 +96,21 @@ serve(async (req) => {
           // Get load details for notification
           const { data: load } = await supabase
             .from("loads")
-            .select("origin_address, destination_address, price_cents")
+            .select("origin_address, destination_address, price_cents, status")
             .eq("id", loadId)
             .single();
 
           if (load) {
+            // Create actionable notification for dispatchers
+            const isAwaitingPayment = load.status === "Awaiting Payment";
+            const actionMessage = isAwaitingPayment 
+              ? `✅ Payment of $${((load.price_cents || 0) / 100).toFixed(2)} received! Load #${loadId.slice(0, 8)} is ready for driver assignment.`
+              : `Payment of $${((load.price_cents || 0) / 100).toFixed(2)} received for load: ${load.origin_address} → ${load.destination_address}`;
+            
             const notifications = dispatchers.map((d) => ({
               user_id: d.user_id,
-              title: "Payment Received",
-              message: `Payment of $${((load.price_cents || 0) / 100).toFixed(2)} received for load: ${load.origin_address} → ${load.destination_address}`,
+              title: isAwaitingPayment ? "🚛 Ready for Driver Assignment" : "Payment Received",
+              message: actionMessage,
               type: "payment_received",
               load_id: loadId,
               read: false,

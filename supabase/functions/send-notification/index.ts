@@ -46,13 +46,14 @@ const notificationRequestSchema = z.object({
   loadData: loadDataSchema.optional(),
   driverData: driverDataSchema.optional(),
   notifyDispatcher: z.boolean().optional(),
+  priceCents: z.number().int().positive().optional(),
 });
 
 type NotificationRequest = z.infer<typeof notificationRequestSchema>;
 type LoadData = z.infer<typeof loadDataSchema>;
 type DriverData = z.infer<typeof driverDataSchema>;
 
-function getEmailContent(type: string, loadData: LoadData) {
+function getEmailContent(type: string, loadData: LoadData, priceCents?: number) {
   const baseStyle = `
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     line-height: 1.6;
@@ -277,6 +278,54 @@ function getEmailContent(type: string, loadData: LoadData) {
         `,
       };
 
+    case "payment_requested":
+      const priceFormatted = priceCents ? `$${(priceCents / 100).toFixed(2)}` : 'See dashboard for details';
+      return {
+        subject: `💳 Payment Required for Load #${loadData.id.slice(0, 8)}`,
+        html: `
+          <div style="${baseStyle}">
+            <div style="${headerStyle}">
+              <h1 style="margin: 0; font-size: 28px;">🚚 Road Runner Express</h1>
+            </div>
+            <div style="${contentStyle}">
+              <h2 style="color: #002147; margin-top: 0;">Payment Required for Your Shipment 💳</h2>
+              <p>Your load request has been approved! Please complete payment to proceed with driver assignment.</p>
+              
+              ${priceCents ? `
+              <div style="background: ${accentColor}; color: white; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
+                <p style="margin: 0; font-size: 14px; opacity: 0.9;">Amount Due</p>
+                <p style="margin: 8px 0 0 0; font-size: 32px; font-weight: bold;">${priceFormatted}</p>
+              </div>
+              ` : ''}
+              
+              <div style="${detailBoxStyle}">
+                <h3 style="margin-top: 0; color: #002147;">Shipment Details</h3>
+                <p><strong>Reference ID:</strong> #${loadData.id.slice(0, 8)}</p>
+                <p><strong>Pickup:</strong> ${loadData.origin_address}</p>
+                <p><strong>Delivery:</strong> ${loadData.destination_address}</p>
+                <p><strong>Scheduled Pickup:</strong> ${formatDate(loadData.pickup_date)}</p>
+                ${loadData.trailer_type ? `<p><strong>Trailer Type:</strong> ${loadData.trailer_type}</p>` : ''}
+                ${loadData.weight_lbs ? `<p><strong>Weight:</strong> ${loadData.weight_lbs.toLocaleString()} lbs</p>` : ''}
+              </div>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <p style="color: #6c757d; margin-bottom: 16px;">Log in to your dashboard to complete payment:</p>
+                <p style="background: ${accentColor}; color: white; padding: 14px 28px; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px;">
+                  Pay Now in Dashboard
+                </p>
+              </div>
+              
+              <p style="color: #6c757d; font-size: 14px; text-align: center;">
+                A driver will be assigned immediately after payment is confirmed.
+              </p>
+            </div>
+            <div style="${footerStyle}">
+              <p style="margin: 0;">Road Runner Express - Fast, Reliable, On Time</p>
+            </div>
+          </div>
+        `,
+      };
+
     default:
       return { subject: "Road Runner Express Notification", html: "<p>Notification</p>" };
   }
@@ -400,12 +449,14 @@ function getInAppNotificationTitle(type: string): string {
       return "ETA Updated";
     case "driver_availability_changed":
       return "Driver Availability Changed";
+    case "payment_requested":
+      return "Payment Required";
     default:
       return "Notification";
   }
 }
 
-function getInAppNotificationMessage(type: string, loadData?: LoadData, driverData?: DriverData): string {
+function getInAppNotificationMessage(type: string, loadData?: LoadData, driverData?: DriverData, priceCents?: number): string {
   if (type === "driver_availability_changed" && driverData) {
     const availableInfo = driverData.newStatus === "Not Available" && driverData.availableAt 
       ? ` - Available ${new Date(driverData.availableAt).toLocaleString()}`
@@ -429,6 +480,9 @@ function getInAppNotificationMessage(type: string, loadData?: LoadData, driverDa
       return `Your shipment #${shortId} has been delivered to ${loadData.destination_address}.`;
     case "eta_updated":
       return `ETA for shipment #${shortId} has been updated${loadData.eta ? `: ${new Date(loadData.eta).toLocaleString()}` : ''}.`;
+    case "payment_requested":
+      const priceText = priceCents ? ` ($${(priceCents / 100).toFixed(2)})` : '';
+      return `Payment required for load #${shortId}${priceText}. Complete payment to proceed with driver assignment.`;
     default:
       return "You have a new notification.";
   }
@@ -570,7 +624,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { type, recipientEmail, recipientUserId, loadData, driverData, notifyDispatcher } = validationResult.data;
+    const { type, recipientEmail, recipientUserId, loadData, driverData, notifyDispatcher, priceCents } = validationResult.data;
 
     // Handle driver availability notifications
     if (type === "driver_availability_changed") {
@@ -756,7 +810,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log(`Processing ${type} notification for load ${loadData.id}`);
     console.log(`Recipient: ${recipientEmail}, User ID: ${recipientUserId}`);
 
-    const emailContent = getEmailContent(type, loadData);
+    const emailContent = getEmailContent(type, loadData, priceCents);
     
     // Send to recipient using Resend API
     const recipientResponse = await fetch("https://api.resend.com/emails", {
@@ -784,7 +838,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Create in-app notification content
     const notificationTitle = getInAppNotificationTitle(type);
-    const notificationMessage = getInAppNotificationMessage(type, loadData);
+    const notificationMessage = getInAppNotificationMessage(type, loadData, undefined, priceCents);
     
     const notificationsToInsert: Array<{
       user_id: string;
