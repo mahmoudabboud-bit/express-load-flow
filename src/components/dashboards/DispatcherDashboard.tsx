@@ -24,14 +24,16 @@ import {
   MapPin,
   FileCheck,
   Users,
-  UserPlus
+  UserPlus,
+  CreditCard,
+  DollarSign
 } from "lucide-react";
 
 interface Load {
   id: string;
   origin_address: string;
   destination_address: string;
-  status: "Pending" | "Assigned" | "In-Transit" | "Delivered";
+  status: "Pending" | "Assigned" | "Awaiting Payment" | "In-Transit" | "Delivered";
   trailer_type: string;
   weight_lbs: number;
   pickup_date: string;
@@ -41,6 +43,8 @@ interface Load {
   created_at: string;
   client_signature_url?: string | null;
   delivered_at?: string | null;
+  payment_required?: boolean | null;
+  payment_status?: string | null;
 }
 
 export function DispatcherDashboard() {
@@ -70,6 +74,7 @@ export function DispatcherDashboard() {
   const stats = {
     total: loads.length,
     pending: loads.filter((l) => l.status === "Pending").length,
+    awaitingPayment: loads.filter((l) => l.status === "Awaiting Payment").length,
     assigned: loads.filter((l) => l.status === "Assigned").length,
     inTransit: loads.filter((l) => l.status === "In-Transit").length,
     delivered: loads.filter((l) => l.status === "Delivered").length,
@@ -77,6 +82,7 @@ export function DispatcherDashboard() {
   };
 
   const pendingLoads = loads.filter((l) => l.status === "Pending");
+  const awaitingPaymentLoads = loads.filter((l) => l.status === "Awaiting Payment");
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -121,7 +127,7 @@ export function DispatcherDashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
         <Card className="card-elevated">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
@@ -145,6 +151,20 @@ export function DispatcherDashboard() {
               <div>
                 <p className="text-2xl font-bold text-foreground">{stats.pending}</p>
                 <p className="text-sm text-muted-foreground">Pending</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="card-elevated">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center">
+                <CreditCard className="text-amber-500" size={24} />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">{stats.awaitingPayment}</p>
+                <p className="text-sm text-muted-foreground">Awaiting Payment</p>
               </div>
             </div>
           </CardContent>
@@ -178,7 +198,7 @@ export function DispatcherDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="card-elevated col-span-2 lg:col-span-1">
+        <Card className="card-elevated">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-accent/20 rounded-xl flex items-center justify-center">
@@ -255,6 +275,81 @@ export function DispatcherDashboard() {
           )}
         </CardContent>
       </Card>
+
+      {/* Awaiting Payment */}
+      {awaitingPaymentLoads.length > 0 && (
+        <Card className="card-elevated border-l-4 border-l-amber-500">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="text-amber-500" size={20} />
+              Awaiting Payment ({awaitingPaymentLoads.length})
+            </CardTitle>
+            <Link to="/dashboard/queue?status=Awaiting%20Payment">
+              <Button variant="ghost" size="sm">
+                View All
+                <ArrowRight className="ml-2" size={16} />
+              </Button>
+            </Link>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {awaitingPaymentLoads.slice(0, 5).map((load) => {
+                const isPaid = load.payment_status === "paid";
+                return (
+                  <div
+                    key={load.id}
+                    className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-secondary/30 rounded-xl gap-4"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <StatusBadge status={load.status} />
+                        {isPaid ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 bg-green-100 px-2 py-0.5 rounded-full">
+                            <DollarSign size={12} />
+                            Paid
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">
+                            <Clock size={12} />
+                            Payment Pending
+                          </span>
+                        )}
+                        {load.price_cents && (
+                          <span className="text-xs font-medium text-foreground">
+                            ${(load.price_cents / 100).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-sm">
+                        <span className="font-medium">{load.origin_address}</span>
+                        <span className="text-muted-foreground mx-2">→</span>
+                        <span className="font-medium">{load.destination_address}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-sm text-muted-foreground">
+                        {new Date(load.pickup_date).toLocaleDateString()}
+                      </div>
+                      {isPaid ? (
+                        <Link to={`/dashboard/queue?approve=${load.id}`}>
+                          <Button variant="accent" size="sm">
+                            <Truck className="mr-1" size={14} />
+                            Assign Driver
+                          </Button>
+                        </Link>
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic">
+                          Waiting for client payment...
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Recent Activity */}
       <Card className="card-elevated">

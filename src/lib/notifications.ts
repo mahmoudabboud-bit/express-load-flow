@@ -27,7 +27,8 @@ export async function sendNotification(
   recipientEmail: string,
   loadData: LoadData,
   notifyDispatcher: boolean = false,
-  recipientUserId?: string
+  recipientUserId?: string,
+  priceCents?: number
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const { data, error } = await supabase.functions.invoke("send-notification", {
@@ -37,6 +38,7 @@ export async function sendNotification(
         recipientUserId,
         loadData,
         notifyDispatcher,
+        priceCents,
       },
     });
 

@@ -360,7 +360,8 @@ export default function LoadQueuePage() {
               pickup_date: selectedLoad.pickup_date,
             },
             false,
-            selectedLoad.client_id
+            selectedLoad.client_id,
+            priceInCents
           );
         }
 
